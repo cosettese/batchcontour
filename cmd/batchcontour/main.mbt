@@ -39,24 +39,31 @@ let usage =
   #|Usage: batchcontour review INPUT.json
   #|       batchcontour summarize INPUT.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
+  #|       batchcontour propose-durations INPUT.json HISTORY.json
 
 ///|
-async fn verify_durations(plan_path : String, history_path : String) -> Int32 {
+async fn duration_command(
+  command : String,
+  plan_path : String,
+  history_path : String,
+) -> Int32 {
   let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
     error => raise FileError("\{plan_path}: \{error}")
   }
-  let report = try {
+  let (document, exit_code) = try {
     let history = @capacity.RunHistory::from_json(read_input(history_path))
-    @capacity.check_durations(input, history)
+    if command == "propose-durations" {
+      let proposal = @capacity.widen_duration_bounds(input, history)
+      (proposal.to_json(), 0)
+    } else {
+      let report = @capacity.check_durations(input, history)
+      (report.to_json(), if report.has_failures() { 2 } else { 0 })
+    }
   } catch {
     error => raise FileError("\{history_path}: \{error}")
   }
-  @stdio.stdout.text.write(report.to_json().stringify() + "\n")
-  if report.has_failures() {
-    2
-  } else {
-    0
-  }
+  @stdio.stdout.text.write(document.stringify() + "\n")
+  exit_code
 }
 
 ///|
@@ -87,8 +94,13 @@ async fn run(args : ArrayView[String]) -> Int32 {
           1
         }
       }
-    ["verify-durations", plan_path, history_path] =>
-      verify_durations(plan_path, history_path) catch {
+    [
+      "verify-durations"
+      | "propose-durations" as command,
+      plan_path,
+      history_path,
+    ] =>
+      duration_command(command, plan_path, history_path) catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")
           1

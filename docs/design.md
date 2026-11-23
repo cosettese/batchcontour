@@ -40,7 +40,7 @@ capacity boundaries with the existing resource event stream, so temporary
 capacity can change even when no job starts or finishes.
 
 The current release compares a bounded UTC model with fixed or time-varying
-capacity. The duration evidence command checks declared ranges against
-provided, version-labelled runs. Provider adapters and automatically
-proposed bounds would need separate evidence and tests with representative
-datasets.
+capacity. The duration evidence commands check declared ranges against
+version-labelled runs and can propose wider, minute-aligned ranges for
+another review. Provider-specific adapters need separate evidence and
+tests with representative datasets.

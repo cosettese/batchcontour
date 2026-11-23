@@ -45,7 +45,7 @@ async fn demo(
 }
 
 ///|
-async fn verify_duration_cli(target : String) -> (String, String) {
+async fn verify_duration_cli(target : String) -> (String, String, String) {
   let plan = "examples/kubernetes/maintenance.json"
   let (blocked, _) = invoke_cli(
     target,
@@ -81,8 +81,23 @@ async fn verify_duration_cli(target : String) -> (String, String) {
     fields.get("verdict") == Some(Json::string("passed")) else {
     fail("incorrect duration pass report on " + target)
   }
+  let (proposal, _) = invoke_cli(
+    target,
+    ["propose-durations", plan, "examples/kubernetes/runtime-outlier.json"],
+    0,
+  )
+  let updated = @json.parse(proposal[:])
+  guard updated is Object(fields) &&
+    fields.get("schema") == Some(Json::string("batchcontour.input.v2")) &&
+    fields.get("capacity_overrides") is Some(Array([Object(_)])) &&
+    fields.get("baseline") is Some(Array([Object(base)])) &&
+    fields.get("candidate") is Some(Array([Object(candidate)])) &&
+    base.get("max_minutes") == Some(Json::number(2.0)) &&
+    candidate.get("max_minutes") == Some(Json::number(3.0)) else {
+    fail("incorrect proposed bounds on " + target)
+  }
   println("Duration evidence verified on " + target)
-  (blocked, passed)
+  (blocked, passed, proposal)
 }
 
 ///|
@@ -135,8 +150,12 @@ async fn verify_cli(target : String) -> Array[String] {
     debt.get("maximum_excess_unit_minutes") == Some(Json::number(2.0)) else {
     fail("incorrect maintenance summary on " + target)
   }
-  let (duration_blocked, duration_passed) = verify_duration_cli(target)
-  [before, after, maintenance, summary, duration_blocked, duration_passed]
+  let (duration_blocked, duration_passed, proposal) = verify_duration_cli(
+    target,
+  )
+  [
+    before, after, maintenance, summary, duration_blocked, duration_passed, proposal,
+  ]
 }
 
 ///|

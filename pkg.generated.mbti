@@ -11,6 +11,8 @@ pub fn check_durations(ReviewInput, RunHistory) -> DurationReport raise ReviewEr
 
 pub fn compare_capacity(ReviewInput) -> CapacityReport raise ReviewError
 
+pub fn widen_duration_bounds(ReviewInput, RunHistory) -> ReviewInput raise ReviewError
+
 // Errors
 #derive(@debug.Debug)
 pub(all) suberror ReviewError {

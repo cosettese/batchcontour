@@ -41,9 +41,11 @@ moon run cmd/batchcontour --target wasm -- summarize examples/kubernetes/mainten
 moon run cmd/batchcontour --target wasm -- verify-durations examples/kubernetes/maintenance.json examples/kubernetes/runtime-outlier.json
 ```
 
+样本足够时，可以用 `propose-durations` 生成一份更新后的排程文件。示例中候选任务的上限会从 2 分钟扩到 3 分钟，生成的文件可以直接交给容量审查。 [提案流程](docs/duration-evidence.md#propose-wider-bounds)
+
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.4.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.5.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)

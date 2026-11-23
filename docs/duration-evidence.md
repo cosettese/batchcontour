@@ -59,3 +59,29 @@ ID, timestamps, elapsed seconds and reason. Missing extrema are JSON null.
 Any outlier or row below the minimum sample count blocks the evidence check.
 Fix an inaccurate declaration or collect a representative sample before
 rerunning the checks.
+
+## Propose wider bounds
+
+When all jobs in both plan versions have enough samples and every observation
+is between 60 and 604,800 seconds inclusive, `propose-durations` emits an
+updated review document. It rounds the smallest observed duration down and
+the largest up to whole minutes. A bound changes only if that change widens
+the range. The input file, schema version, schedule, capacity timeline and
+resource demands are preserved in the workflow. The command returns code 1
+with the affected job when observations are missing or unrepresentable.
+An error emits no proposal.
+
+Run from the repository root in a POSIX shell or PowerShell 7.
+
+```sh
+moon run cmd/batchcontour --target wasm -- propose-durations examples/kubernetes/maintenance.json examples/kubernetes/runtime-outlier.json > proposed-review.json
+moon run cmd/batchcontour --target wasm -- verify-durations proposed-review.json examples/kubernetes/runtime-outlier.json
+moon run cmd/batchcontour --target wasm -- review proposed-review.json
+```
+
+The first command increases the candidate maximum from 2 to 3 minutes
+because 143 seconds exceeds two minutes. The second command checks the
+same observations against the resulting range and passes. The final command
+reevaluates the longer overlap and still blocks the proposed schedule.
+Libraries can obtain the immutable proposal with
+`widen_duration_bounds(review, history)`.
