@@ -35,10 +35,11 @@ For each side and each run, expansion emits the start and up to two duration
 boundaries per named resource. The comparison sorts resource events and
 applies all events at a minute before reporting the following interval.
 This also accounts for runs that start before the review window and avoids
-counting a shared end/start boundary as an overlap.
+counting a shared end/start boundary as an overlap. It interleaves explicit
+capacity boundaries with the existing resource event stream, so temporary
+capacity can change even when no job starts or finishes.
 
-The current release compares a fixed UTC model and produces a CI gate with
-evidence. Future milestones can bring in duration bounds from documented
-runtime exports, then extend the budget to a timeline for scheduled capacity
-changes. Real runtime validation and provider adapters will need separate
-tests with representative datasets.
+The current release compares a bounded UTC model with fixed or time-varying
+capacity. Future milestones can bring in duration bounds from documented
+runtime exports. Real runtime validation and provider adapters will need
+separate tests with representative datasets.

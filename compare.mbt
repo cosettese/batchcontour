@@ -82,15 +82,27 @@ fn review_resource(
   findings : ReportBuilder,
   events : Array[Event],
   budget : Capacity,
+  window_start : Int64,
   end : Int64,
 ) -> Unit raise ReviewError {
   let baseline = ActiveLoad::new()
   let candidate = ActiveLoad::new()
-  let capacity = budget.units.to_int64()
   events.sort_by_key(event => event.minute)
   let mut index = 0
-  while index < events.length() {
-    let start = events[index].minute
+  let mut override_index = 0
+  let mut cursor = window_start
+  while cursor < end {
+    let start = cursor
+    while budget.overrides.get(override_index) is Some(period) &&
+          period.end <= start {
+      override_index += 1
+    }
+    let (units, next_budget_boundary) = match
+      budget.overrides.get(override_index) {
+      Some(period) if period.start <= start => (period.units, period.end)
+      Some(period) => (budget.units, period.start)
+      None => (budget.units, end)
+    }
     // Apply all changes at the boundary before looking at the next interval.
     while index < events.length() && events[index].minute == start {
       let event = events[index]
@@ -102,9 +114,11 @@ fn review_resource(
       index += 1
     }
     let until = match events.get(index) {
-      Some(event) => event.minute
-      None => end
+      Some(event) if event.minute < next_budget_boundary => event.minute
+      _ => next_budget_boundary
     }
+    cursor = until
+    let capacity = units.to_int64()
     if baseline.maximum <= capacity && candidate.maximum <= capacity {
       continue
     }
@@ -126,7 +140,7 @@ fn review_resource(
     }
     findings.findings.push({
       resource: budget.resource,
-      capacity: budget.units,
+      capacity: units,
       from_minute: start,
       until_minute: until,
       baseline: before,
@@ -154,7 +168,13 @@ pub fn compare_capacity(
     regressions: 0,
   }
   for index, capacity in input.capacities {
-    review_resource(result, queue.by_resource[index], capacity, input.end)
+    review_resource(
+      result,
+      queue.by_resource[index],
+      capacity,
+      input.start,
+      input.end,
+    )
   }
   {
     start: input.start,

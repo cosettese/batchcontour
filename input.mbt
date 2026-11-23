@@ -96,6 +96,7 @@ fn read_capacities(value : Json) -> Array[Capacity] raise ReviewError {
     result.push({
       resource: id,
       units: read_integer(units, 0, max_units, "$.capacities." + id),
+      overrides: [],
     })
   }
   result.sort_by((a, b) => a.resource[:].lexical_compare(b.resource[:]))
@@ -179,7 +180,7 @@ fn read_jobs(
 }
 
 ///|
-/// Decode and validate a complete v1 review. Unknown and duplicate keys fail.
+/// Decode and validate a v1 or v2 review. Unknown and duplicate keys fail.
 pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
   guard text.length() <= max_input_units else {
     raise LimitExceeded(path="$", detail="input exceeds 1 Mi UTF-16 code units")
@@ -192,13 +193,32 @@ pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
   ) catch {
     error => raise InvalidInput(path="$", detail=error.to_string())
   }
-  let fields = read_object(
-    value,
-    ["schema", "window", "capacities", "baseline", "candidate"],
-    "$",
-  )
-  guard read_string(fields["schema"], "$.schema") == input_schema else {
-    raise InvalidInput(path="$.schema", detail="expected " + input_schema)
+  guard value is Object(root) else {
+    raise InvalidInput(path="$", detail="expected an object")
+  }
+  let schema = match root.get("schema") {
+    Some(String(name)) if name == input_schema || name == timed_input_schema =>
+      name
+    _ =>
+      raise InvalidInput(
+        path="$.schema",
+        detail="expected " + input_schema + " or " + timed_input_schema,
+      )
+  }
+  let fields = if schema == timed_input_schema {
+    read_object(
+      value,
+      [
+        "schema", "window", "capacities", "baseline", "candidate", "capacity_overrides",
+      ],
+      "$",
+    )
+  } else {
+    read_object(
+      value,
+      ["schema", "window", "capacities", "baseline", "candidate"],
+      "$",
+    )
   }
   let window = read_object(fields["window"], ["start", "end"], "$.window")
   let start = parse_utc(
@@ -216,9 +236,17 @@ pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
     )
   }
   let capacities = read_capacities(fields["capacities"])
+  if schema == timed_input_schema {
+    read_capacity_overrides(
+      fields["capacity_overrides"],
+      capacities,
+      start,
+      end,
+    )
+  }
   let baseline = read_jobs(fields["baseline"], capacities, "$.baseline")
   let candidate = read_jobs(fields["candidate"], capacities, "$.candidate")
-  { start, end, capacities, baseline, candidate, }
+  { schema, start, end, capacities, baseline, candidate, }
 }
 
 ///|
@@ -250,8 +278,8 @@ pub fn ReviewInput::to_json(self : ReviewInput) -> Json {
   for capacity in self.capacities {
     capacities[capacity.resource] = Json::number(capacity.units.to_double())
   }
-  {
-    "schema": Json::string(input_schema),
+  let fields : Map[String, Json] = {
+    "schema": Json::string(self.schema),
     "window": window_json(self.start, self.end),
     "capacities": Json::object(capacities),
     "baseline": Json::array(
@@ -261,4 +289,8 @@ pub fn ReviewInput::to_json(self : ReviewInput) -> Json {
       self.candidate.map(job => job_json(job, self.capacities)),
     ),
   }
+  if self.schema == timed_input_schema {
+    fields["capacity_overrides"] = overrides_json(self.capacities)
+  }
+  Json::object(fields)
 }

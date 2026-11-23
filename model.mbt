@@ -2,6 +2,9 @@
 let input_schema = "batchcontour.input.v1"
 
 ///|
+let timed_input_schema = "batchcontour.input.v2"
+
+///|
 let max_input_units = 1_048_576
 
 ///|
@@ -18,6 +21,9 @@ let max_resources = 32
 
 ///|
 let max_units = 1_000_000
+
+///|
+let max_capacity_overrides = 512
 
 ///|
 /// A rejected input or incomplete computation. Paths identify submitted fields.
@@ -38,9 +44,17 @@ pub impl Show for ReviewError with fn output(self, logger) {
 }
 
 ///|
+priv struct CapacityOverride {
+  start : Int64
+  end : Int64
+  units : Int32
+}
+
+///|
 priv struct Capacity {
   resource : String
   units : Int32
+  overrides : Array[CapacityOverride]
 }
 
 ///|
@@ -62,6 +76,7 @@ priv struct Job {
 ///|
 /// Validated baseline and candidate schedules with one UTC window and budget.
 struct ReviewInput {
+  schema : String
   start : Int64
   end : Int64
   capacities : Array[Capacity]

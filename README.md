@@ -23,9 +23,15 @@ moon run cmd/batchcontour --target wasm -- review examples/kubernetes/repaired.j
 
 退出码为 0 或 2 时，标准输出是一份完整的 JSON 报告。
 
+维护期间容量会变化时，可以用 v2 文件为任意资源声明临时容量。下例的工作槽位平时为 2，02:02 至 02:04 降为 1。报告只会在这段时间指出候选排程的超载风险。
+
+```sh
+moon run cmd/batchcontour --target wasm -- review examples/kubernetes/maintenance.json
+```
+
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.1.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.2.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)
@@ -46,4 +52,4 @@ moon run scripts/verify.mbtx all
 
 `portable` 执行 Wasm、Wasm-GC、JavaScript 库测试和 Wasm 文件流程。`all` 还实际运行 Native 库测试和 CLI，并要求两种 CLI 输出一致。JavaScript 测试需要 Node，Native 需要受支持的 C 工具链。GitHub Actions 在 Linux、macOS、Windows 上执行 `all` 并检查生成接口。逐分钟参考实现独立核对 60 组排程和容量，另有边界、往返、确定性及失败恢复测试。
 
-当前版本实现固定预算下的容量回归审查。[设计与生态对比](docs/design.md) 记录了可采用的场景、已有方案的接口边界和后续迭代。[来源与许可证](SOURCES.md) 记录了依赖和样例出处。本项目采用 Apache-2.0。
+当前版本支持固定容量和共享的分时容量预算。[设计与生态对比](docs/design.md) 记录了可采用的场景、已有方案的接口边界和后续迭代。[来源与许可证](SOURCES.md) 记录了依赖和样例出处。本项目采用 Apache-2.0。

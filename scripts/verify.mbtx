@@ -37,7 +37,7 @@ async fn demo(
 }
 
 ///|
-async fn verify_cli(target : String) -> (String, String) {
+async fn verify_cli(target : String) -> (String, String, String) {
   let (before, _) = demo(target, "blocked", 2)
   let report = @json.parse(before[:])
   guard report is Object(fields) &&
@@ -59,8 +59,21 @@ async fn verify_cli(target : String) -> (String, String) {
     fields.get("findings") is Some(Array([])) else {
     fail("incorrect repaired report on " + target)
   }
+  let (maintenance, _) = demo(target, "maintenance", 2)
+  let report = @json.parse(maintenance[:])
+  guard report is Object(fields) &&
+    fields.get("regression_count") == Some(Json::number(2.0)) &&
+    fields.get("findings") is Some(Array([Object(first), Object(second)])) &&
+    first.get("window") ==
+    Some({ "start": "2026-11-23T02:02:00Z", "end": "2026-11-23T02:03:00Z" }) &&
+    second.get("window") ==
+    Some({ "start": "2026-11-23T02:03:00Z", "end": "2026-11-23T02:04:00Z" }) &&
+    first.get("capacity") == Some(Json::number(1.0)) &&
+    second.get("capacity") == Some(Json::number(1.0)) else {
+    fail("incorrect maintenance report on " + target)
+  }
   println("CLI file workflow verified on " + target)
-  (before, after)
+  (before, after, maintenance)
 }
 
 ///|

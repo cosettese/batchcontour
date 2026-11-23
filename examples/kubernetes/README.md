@@ -13,6 +13,14 @@ of those minutes in the candidate. Expected load is 3 in both baseline bounds,
 because the contributing `hello` run IDs change at 02:02. With the
 five-minute repair, no pair of `hello` instances can overlap.
 
-From the root, run `moon run scripts/verify.mbtx portable` to exercise all three
+In `maintenance.json` the candidate adopts the upstream minute schedule.
+Its 1–2 minute runtime means it needs at most two slots in the review window.
+Two slots fit at normal capacity. During the synthetic maintenance interval
+`[02:02, 02:04)`, one slot is available and the upper demand bound exceeds
+capacity by one slot. The report contains two one-minute regression intervals
+and the CLI exits 2. The baseline keeps the five-minute cadence.
+
+From the root, run `moon run scripts/verify.mbtx portable` to exercise all four
 fixtures. It checks the blocked report, refusal of the duplicate capacity key in
-`invalid.json`, and the repaired report following the refusal.
+`invalid.json`, the repaired report following the refusal and the maintenance
+window's effective capacity.
