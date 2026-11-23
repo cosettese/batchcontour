@@ -180,12 +180,11 @@ fn read_jobs(
 }
 
 ///|
-/// Decode and validate a v1 or v2 review. Unknown and duplicate keys fail.
-pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
+fn parse_document(text : String) -> Json raise ReviewError {
   guard text.length() <= max_input_units else {
     raise LimitExceeded(path="$", detail="input exceeds 1 Mi UTF-16 code units")
   }
-  let value = @json.parse(
+  @json.parse(
     text[:],
     max_nesting_depth=8,
     reject_duplicate_keys=true,
@@ -193,6 +192,12 @@ pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
   ) catch {
     error => raise InvalidInput(path="$", detail=error.to_string())
   }
+}
+
+///|
+/// Decode and validate a v1 or v2 review. Unknown and duplicate keys fail.
+pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
+  let value = parse_document(text)
   guard value is Object(root) else {
     raise InvalidInput(path="$", detail="expected an object")
   }

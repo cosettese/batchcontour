@@ -24,3 +24,7 @@ From the root, run `moon run scripts/verify.mbtx portable` to exercise all four
 fixtures. It checks the blocked report, refusal of the duplicate capacity key in
 `invalid.json`, the repaired report following the refusal and the maintenance
 window's effective capacity.
+
+The [duration evidence example](../../docs/duration-evidence.md) adds
+synthetic completed runs for the two versions of `hello`. The same
+verification script exercises accepted, out-of-range and malformed history.

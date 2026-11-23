@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn check_durations(ReviewInput, RunHistory) -> DurationReport raise ReviewError
+
 pub fn compare_capacity(ReviewInput) -> CapacityReport raise ReviewError
 
 // Errors
@@ -30,6 +32,31 @@ pub struct Contribution {
   guaranteed : Bool
 }
 
+pub struct DurationCheck {
+  plan : String
+  job_id : String
+  minimum_seconds : Int64
+  maximum_seconds : Int64
+  sample_count : Int32
+  observed_minimum_seconds : Int64?
+  observed_maximum_seconds : Int64?
+  violations : ArrayView[DurationViolation]
+}
+
+type DurationReport
+pub fn DurationReport::checks(Self) -> ArrayView[DurationCheck]
+pub fn DurationReport::has_failures(Self) -> Bool
+pub fn DurationReport::min_samples(Self) -> Int32
+pub fn DurationReport::to_json(Self) -> @json.Json
+
+pub struct DurationViolation {
+  run_id : String
+  started_at : String
+  finished_at : String
+  elapsed_seconds : Int64
+  reason : String
+}
+
 pub struct Finding {
   resource : String
   capacity : Int32
@@ -51,6 +78,10 @@ pub struct Load {
 type ReviewInput
 pub fn ReviewInput::from_json(String) -> Self raise ReviewError
 pub fn ReviewInput::to_json(Self) -> @json.Json
+
+type RunHistory
+pub fn RunHistory::from_json(String) -> Self raise ReviewError
+pub fn RunHistory::to_json(Self) -> @json.Json
 
 // Type aliases
 

@@ -10,8 +10,21 @@ fn utc_text(minute : Int64) -> String {
 
 ///|
 fn parse_utc(text : String, path : String) -> Int64 raise ReviewError {
-  let detail = "expected a UTC minute in YYYY-MM-DDTHH:MM:00Z (1970–2099)"
-  guard text.length() == 20 && text[16:] == ":00Z" else {
+  parse_utc_timestamp(text, path, minute_aligned=true) / 60L
+}
+
+///|
+fn parse_utc_timestamp(
+  text : String,
+  path : String,
+  minute_aligned~ : Bool,
+) -> Int64 raise ReviewError {
+  let detail = if minute_aligned {
+    "expected a UTC minute in YYYY-MM-DDTHH:MM:00Z (1970–2099)"
+  } else {
+    "expected a UTC timestamp in YYYY-MM-DDTHH:MM:SSZ (1970–2099)"
+  }
+  guard text.length() == 20 && (!minute_aligned || text[16:] == ":00Z") else {
     raise InvalidInput(path~, detail~)
   }
   let shape = "0000-00-00T00:00:00Z"
@@ -29,12 +42,14 @@ fn parse_utc(text : String, path : String) -> Int64 raise ReviewError {
   let moment = @moondate.parse(text[:]) catch {
     _ => raise InvalidInput(path~, detail~)
   }
-  guard moment.epoch() is Some(second) && second % 60L == 0L else {
+  guard moment.epoch() is Some(second) else {
     raise InvalidInput(path~, detail~)
   }
-  let minute = second / 60L
-  guard utc_text(minute) == text else { raise InvalidInput(path~, detail~) }
-  minute
+  let canonical = @moondate.Moment::of_epoch(second, zone=@moondate.Utc).strftime(
+    "%Y-%m-%dT%H:%M:%SZ",
+  )
+  guard canonical == text else { raise InvalidInput(path~, detail~) }
+  second
 }
 
 ///|

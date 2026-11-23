@@ -7,6 +7,7 @@
 | [MoonBit core](https://github.com/moonbitlang/core) | Runtime library, strict JSON and CLI file I/O. | Apache-2.0 |
 | [moonbitlang/async 0.22.10](https://mooncakes.io/docs/moonbitlang/async%400.22.10) | Standalone verification script dependency. | Apache-2.0 |
 | [Kubernetes examples](https://github.com/kubernetes/website/blob/main/content/en/examples/application/job/cronjob.yaml) | The `hello` job name and `* * * * *` expression. No job image, command, or full manifest is bundled. | Apache-2.0 for sample code ([upstream code license](https://github.com/kubernetes/website/blob/main/LICENSE)) |
+| [Kubernetes Job API](https://kubernetes.io/docs/reference/kubernetes-api/batch/job-v1/#JobStatus) | Reference for the semantics of exported start and completion timestamps. All history fixture timestamps and run IDs are synthetic. | Kubernetes documentation, CC BY 4.0 ([upstream policy](https://github.com/kubernetes/website/blob/main/LICENSE)) |
 
 Other fixtures, test expectations, duration and demand values are written for
 this repository. The reference minute simulation and the production interval

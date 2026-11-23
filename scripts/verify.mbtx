@@ -14,30 +14,79 @@ async fn moon(args : Array[String]) -> Unit {
 }
 
 ///|
-async fn demo(
+async fn invoke_cli(
   target : String,
-  example : String,
+  arguments : Array[String],
   code : Int32,
 ) -> (String, String) {
-  let result = @shell.Cmd("moon", [
-    "run",
-    "cmd/batchcontour",
-    "--target",
-    target,
-    "--",
-    "review",
-    "examples/kubernetes/" + example + ".json",
-  ]).output()
+  let result = @shell.Cmd(
+    "moon",
+    ["run", "cmd/batchcontour", "--target", target, "--", ..arguments],
+  ).output()
   if result.exit_code() != code {
     fail(
-      "unexpected exit for \{target}/\{example}: \{result.exit_code()}\n\{result.stdout()}\n\{result.stderr()}",
+      "unexpected exit for \{target}/\{arguments.join(" ")}: \{result.exit_code()}\n\{result.stdout()}\n\{result.stderr()}",
     )
   }
   (result.stdout().trim().to_owned(), result.stderr())
 }
 
 ///|
-async fn verify_cli(target : String) -> (String, String, String) {
+async fn demo(
+  target : String,
+  example : String,
+  code : Int32,
+) -> (String, String) {
+  invoke_cli(
+    target,
+    ["review", "examples/kubernetes/" + example + ".json"],
+    code,
+  )
+}
+
+///|
+async fn verify_duration_cli(target : String) -> (String, String) {
+  let plan = "examples/kubernetes/maintenance.json"
+  let (blocked, _) = invoke_cli(
+    target,
+    ["verify-durations", plan, "examples/kubernetes/runtime-outlier.json"],
+    2,
+  )
+  let report = @json.parse(blocked[:])
+  guard report is Object(fields) &&
+    fields.get("verdict") == Some(Json::string("blocked")) &&
+    fields.get("checks") is Some(Array([Object(_), Object(candidate)])) &&
+    candidate.get("observed_maximum_seconds") == Some(Json::number(143.0)) &&
+    candidate.get("violations") is Some(Array([Object(violation)])) &&
+    violation.get("id") == Some(Json::string("can-2")) &&
+    violation.get("reason") == Some(Json::string("above_maximum")) else {
+    fail("incorrect duration evidence report on " + target)
+  }
+  let invalid_history = "examples/kubernetes/invalid.json"
+  let (invalid, diagnostic) = invoke_cli(
+    target,
+    ["verify-durations", plan, invalid_history],
+    1,
+  )
+  assert_eq(invalid, "")
+  assert_true(diagnostic.contains(invalid_history))
+  assert_true(diagnostic.contains("Duplicate key"))
+  let (passed, _) = invoke_cli(
+    target,
+    ["verify-durations", plan, "examples/kubernetes/runtime-in-range.json"],
+    0,
+  )
+  let report = @json.parse(passed[:])
+  guard report is Object(fields) &&
+    fields.get("verdict") == Some(Json::string("passed")) else {
+    fail("incorrect duration pass report on " + target)
+  }
+  println("Duration evidence verified on " + target)
+  (blocked, passed)
+}
+
+///|
+async fn verify_cli(target : String) -> Array[String] {
   let (before, _) = demo(target, "blocked", 2)
   let report = @json.parse(before[:])
   guard report is Object(fields) &&
@@ -73,7 +122,8 @@ async fn verify_cli(target : String) -> (String, String, String) {
     fail("incorrect maintenance report on " + target)
   }
   println("CLI file workflow verified on " + target)
-  (before, after, maintenance)
+  let (duration_blocked, duration_passed) = verify_duration_cli(target)
+  [before, after, maintenance, duration_blocked, duration_passed]
 }
 
 ///|

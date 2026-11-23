@@ -35,7 +35,28 @@ async fn read_input(path : String) -> String {
 }
 
 ///|
-let usage = "Usage: batchcontour review INPUT.json"
+let usage =
+  #|Usage: batchcontour review INPUT.json
+  #|       batchcontour verify-durations INPUT.json HISTORY.json
+
+///|
+async fn verify_durations(plan_path : String, history_path : String) -> Int32 {
+  let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+    error => raise FileError("\{plan_path}: \{error}")
+  }
+  let report = try {
+    let history = @capacity.RunHistory::from_json(read_input(history_path))
+    @capacity.check_durations(input, history)
+  } catch {
+    error => raise FileError("\{history_path}: \{error}")
+  }
+  @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+  if report.has_failures() {
+    2
+  } else {
+    0
+  }
+}
 
 ///|
 async fn run(args : ArrayView[String]) -> Int32 {
@@ -57,6 +78,13 @@ async fn run(args : ArrayView[String]) -> Int32 {
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{path}: \{error}\n")
+          1
+        }
+      }
+    ["verify-durations", plan_path, history_path] =>
+      verify_durations(plan_path, history_path) catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
           1
         }
       }
