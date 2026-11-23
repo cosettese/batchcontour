@@ -1,0 +1,90 @@
+----
+import {
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+///|
+async fn moon(args : Array[String]) -> Unit {
+  @shell.Cmd("moon", args, stdout=Inherit, stderr=Inherit).run(
+    timeout_ms=180000,
+  )
+}
+
+///|
+async fn demo(
+  target : String,
+  example : String,
+  code : Int32,
+) -> (String, String) {
+  let result = @shell.Cmd("moon", [
+    "run",
+    "cmd/batchcontour",
+    "--target",
+    target,
+    "--",
+    "review",
+    "examples/kubernetes/" + example + ".json",
+  ]).output()
+  if result.exit_code() != code {
+    fail(
+      "unexpected exit for \{target}/\{example}: \{result.exit_code()}\n\{result.stdout()}\n\{result.stderr()}",
+    )
+  }
+  (result.stdout().trim().to_owned(), result.stderr())
+}
+
+///|
+async fn verify_cli(target : String) -> (String, String) {
+  let (before, _) = demo(target, "blocked", 2)
+  let report = @json.parse(before[:])
+  guard report is Object(fields) &&
+    fields.get("verdict") == Some(Json::string("blocked")) &&
+    fields.get("regression_count") == Some(Json::number(2.0)) &&
+    fields.get("findings") is Some(Array([Object(first), Object(_)])) &&
+    first.get("candidate") is Some(Object(load)) &&
+    load.get("minimum") == Some(Json::number(3.0)) &&
+    load.get("maximum") == Some(Json::number(4.0)) else {
+    fail("incorrect blocked report on " + target)
+  }
+  let (invalid, diagnostic) = demo(target, "invalid", 1)
+  assert_eq(invalid, "")
+  assert_true(diagnostic.contains("Duplicate key"))
+  let (after, _) = demo(target, "repaired", 0)
+  let report = @json.parse(after[:])
+  guard report is Object(fields) &&
+    fields.get("verdict") == Some(Json::string("passed")) &&
+    fields.get("findings") is Some(Array([])) else {
+    fail("incorrect repaired report on " + target)
+  }
+  println("CLI file workflow verified on " + target)
+  (before, after)
+}
+
+///|
+async fn main {
+  let args = @env.args()
+  let native = match args[1:] {
+    ["all"] => true
+    ["portable"] => false
+    _ => fail("usage: moon run scripts/verify.mbtx portable|all")
+  }
+  moon(["fmt", "--check"])
+  moon(["fmt", "--check", "scripts/verify.mbtx"])
+  moon(["check", "--target", "all", "--deny-warn"])
+  moon(["info", "--target", "all"])
+  let targets = if native {
+    ["wasm", "wasm-gc", "js", "native"]
+  } else {
+    ["wasm", "wasm-gc", "js"]
+  }
+  for target in targets {
+    moon(["test", "--target", target, "--deny-warn"])
+  }
+  let portable_output = verify_cli("wasm")
+  if native {
+    assert_eq(verify_cli("native"), portable_output)
+  }
+}

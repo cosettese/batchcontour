@@ -1,0 +1,57 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "cosettese/batchcontour"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn compare_capacity(ReviewInput) -> CapacityReport raise ReviewError
+
+// Errors
+#derive(@debug.Debug)
+pub(all) suberror ReviewError {
+  InvalidInput(path~ : String, detail~ : String)
+  LimitExceeded(path~ : String, detail~ : String)
+}
+pub impl Show for ReviewError
+
+// Types and methods
+type CapacityReport
+pub fn CapacityReport::findings(Self) -> ArrayView[Finding]
+pub fn CapacityReport::has_regressions(Self) -> Bool
+pub fn CapacityReport::to_json(Self) -> @json.Json
+
+pub struct Contribution {
+  job_id : String
+  start_minute : Int64
+  units : Int32
+  guaranteed : Bool
+}
+
+pub struct Finding {
+  resource : String
+  capacity : Int32
+  from_minute : Int64
+  until_minute : Int64
+  baseline : Load
+  candidate : Load
+  regression : Bool
+}
+
+pub struct Load {
+  minimum : Int64
+  maximum : Int64
+  minimum_excess : Int64
+  maximum_excess : Int64
+  contributors : ArrayView[Contribution]
+}
+
+type ReviewInput
+pub fn ReviewInput::from_json(String) -> Self raise ReviewError
+pub fn ReviewInput::to_json(Self) -> @json.Json
+
+// Type aliases
+
+// Traits

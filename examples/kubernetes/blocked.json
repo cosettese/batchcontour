@@ -1,0 +1,13 @@
+{
+  "schema": "batchcontour.input.v1",
+  "window": { "start": "2026-11-23T02:00:00Z", "end": "2026-11-23T02:05:00Z" },
+  "capacities": { "worker-slots": 3 },
+  "baseline": [
+    { "id": "hello", "cron": "* * * * *", "min_minutes": 1, "max_minutes": 1, "demand": { "worker-slots": 1 } },
+    { "id": "snapshot", "cron": "1 2 * * *", "min_minutes": 2, "max_minutes": 2, "demand": { "worker-slots": 2 } }
+  ],
+  "candidate": [
+    { "id": "hello", "cron": "* * * * *", "min_minutes": 1, "max_minutes": 2, "demand": { "worker-slots": 1 } },
+    { "id": "snapshot", "cron": "1 2 * * *", "min_minutes": 2, "max_minutes": 2, "demand": { "worker-slots": 2 } }
+  ]
+}
