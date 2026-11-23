@@ -37,6 +37,7 @@ async fn read_input(path : String) -> String {
 ///|
 let usage =
   #|Usage: batchcontour review INPUT.json
+  #|       batchcontour summarize INPUT.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
 
 ///|
@@ -65,11 +66,16 @@ async fn run(args : ArrayView[String]) -> Int32 {
       @stdio.stdout.text.write(usage + "\n")
       0
     }
-    ["review", path] =>
+    ["review" | "summarize" as command, path] =>
       try {
         let input = @capacity.ReviewInput::from_json(read_input(path))
         let report = @capacity.compare_capacity(input)
-        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+        let output = if command == "summarize" {
+          report.summary_json()
+        } else {
+          report.to_json()
+        }
+        @stdio.stdout.text.write(output.stringify() + "\n")
         if report.has_regressions() {
           2
         } else {

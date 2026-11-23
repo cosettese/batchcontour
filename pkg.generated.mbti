@@ -23,6 +23,8 @@ pub impl Show for ReviewError
 type CapacityReport
 pub fn CapacityReport::findings(Self) -> ArrayView[Finding]
 pub fn CapacityReport::has_regressions(Self) -> Bool
+pub fn CapacityReport::summaries(Self) -> Array[ResourceSummary]
+pub fn CapacityReport::summary_json(Self) -> @json.Json
 pub fn CapacityReport::to_json(Self) -> @json.Json
 
 pub struct Contribution {
@@ -73,6 +75,22 @@ pub struct Load {
   minimum_excess : Int64
   maximum_excess : Int64
   contributors : ArrayView[Contribution]
+}
+
+pub struct OverloadStats {
+  guaranteed_minutes : Int64
+  possible_minutes : Int64
+  peak_minimum_excess : Int64
+  peak_maximum_excess : Int64
+  minimum_excess_unit_minutes : Int64
+  maximum_excess_unit_minutes : Int64
+}
+
+pub struct ResourceSummary {
+  resource : String
+  baseline : OverloadStats
+  candidate : OverloadStats
+  regression_minutes : Int64
 }
 
 type ReviewInput

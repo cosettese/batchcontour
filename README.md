@@ -29,6 +29,12 @@ moon run cmd/batchcontour --target wasm -- review examples/kubernetes/repaired.j
 moon run cmd/batchcontour --target wasm -- review examples/kubernetes/maintenance.json
 ```
 
+CI 日志可以用 `summarize` 查看每种资源的超载分钟数、峰值缺口和累计缺口。维护示例会显示该资源有 2 分钟回归，候选的累计缺口上界为 2 槽位·分钟。
+
+```sh
+moon run cmd/batchcontour --target wasm -- summarize examples/kubernetes/maintenance.json
+```
+
 提交排程前也可以核对历史时长。下例里候选任务 `can-2` 运行了 143 秒，超过声明的 120 秒上限，命令退出 **2**。报告还会标出缺乏足够样本的任务。[时长记录格式与用法](docs/duration-evidence.md)
 
 ```sh
@@ -37,7 +43,7 @@ moon run cmd/batchcontour --target wasm -- verify-durations examples/kubernetes/
 
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.3.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.4.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)

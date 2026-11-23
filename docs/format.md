@@ -71,3 +71,21 @@ Expansion is bounded by 120,000 combined resource events. A report can contain
 up to 12,000 intervals and 100,000 contributor entries. Exceeding any budget
 returns a limit diagnostic with no partial report. A shorter review window or
 a review of independent resource groups can reduce the size.
+
+## Capacity summary
+
+`summarize INPUT.json` uses the same gate and exit codes as `review`. It
+emits `batchcontour.capacity-summary.v1`. Each resource that may exceed
+capacity in either plan gets one row. In each plan, guaranteed minutes count
+intervals with a positive lower excess and possible minutes count all
+intervals with a positive upper excess, including those guaranteed to overload.
+The peak fields are the largest lower and upper shortfall. Excess unit-minutes
+are the sum of shortfall multiplied by interval length, such as
+2 connections for 3 minutes producing 6 connection-minutes. Values are per
+resource and use exact integers within the analysis limits.
+
+`regression_minutes` counts minutes when either excess bound increases for
+the same resource. Improvements elsewhere do not offset those minutes, so
+the summary's verdict matches the detailed report. For job-level evidence
+use `review`. Downstream MoonBit code can use `CapacityReport::summaries`
+or encode the same summary with `summary_json`.
