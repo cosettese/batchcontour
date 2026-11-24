@@ -1,0 +1,46 @@
+name: BatchContour capacity review
+description: Review committed batch schedules under the base revision's resource budget
+inputs:
+  base-sha:
+    description: Full Git commit hash of the baseline
+    required: true
+  candidate-sha:
+    description: Full Git commit hash of the candidate
+    required: true
+  budget-path:
+    description: Repository-relative JSON budget path in the base revision
+    required: true
+  plan-path:
+    description: Repository-relative JSON schedule path in the base revision
+    required: true
+  candidate-plan-path:
+    description: Optional replacement schedule path in the candidate revision
+    required: false
+  policy-path:
+    description: Optional absolute capacity policy path in the base revision
+    required: false
+  report-path:
+    description: New writable file path for the JSON report on the runner
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Set up MoonBit
+      uses: hustcer/setup-moonbit@9199da0ab63ea0c0bab1dc15f03d76e17ed4f75f # v1.22
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+    - name: Compare committed schedules
+      shell: bash
+      working-directory: ${{ github.action_path }}/../../..
+      env:
+        BASE_SHA: ${{ inputs.base-sha }}
+        CANDIDATE_SHA: ${{ inputs.candidate-sha }}
+        BUDGET: ${{ inputs.budget-path }}
+        BASELINE_PLAN: ${{ inputs.plan-path }}
+        CANDIDATE_PLAN: ${{ inputs.candidate-plan-path || inputs.plan-path }}
+        POLICY: ${{ inputs.policy-path }}
+        REPORT_PATH: ${{ inputs.report-path }}
+      run: >-
+        moon run --deny-warn scripts/pr-review.mbtx --
+        "$GITHUB_WORKSPACE" "$BASE_SHA" "$CANDIDATE_SHA"
+        "$BUDGET" "$BASELINE_PLAN" "$CANDIDATE_PLAN" "$POLICY" "$REPORT_PATH"

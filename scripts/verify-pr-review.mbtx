@@ -1,0 +1,140 @@
+----
+import {
+  "moonbitlang/async@0.22.10",
+  "moonbitlang/async@0.22.10/fs",
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+///|
+async fn fixture_git(repo : String, args : Array[String]) -> String {
+  let result = @shell.Cmd("git", args, cwd=repo).output(timeout_ms=20000)
+  guard result.exit_code() == 0 else { fail(result.stderr()) }
+  result.stdout().trim().to_owned()
+}
+
+///|
+async fn fixture_commit(repo : String, message : String) -> String {
+  ignore(
+    fixture_git(repo, ["add", "--", "budget.json", "plan.json", "policy.json"]),
+  )
+  ignore(
+    fixture_git(repo, [
+      "-c", "user.name=BatchContour fixture", "-c", "user.email=fixture@example.invalid",
+      "-c", "commit.gpgsign=false", "-c", "core.hooksPath=.never-run-fixture-hooks",
+      "commit", "-m", message,
+    ]),
+  )
+  fixture_git(repo, ["rev-parse", "HEAD"])
+}
+
+///|
+async fn review_fixture(
+  repo : String,
+  base : String,
+  candidate : String,
+  policy : String,
+  report : String,
+  expected : Int32,
+) -> Unit {
+  let result = @shell.Cmd("moon", [
+    "run", "--deny-warn", "scripts/pr-review.mbtx", "--", repo, base, candidate,
+    "budget.json", "plan.json", "plan.json", policy, report,
+  ]).output(timeout_ms=180000)
+  guard result.exit_code() == expected else {
+    fail(
+      "expected PR review exit \{expected}, got \{result.exit_code()}\n\{result.stderr()}\n\{result.stdout()}",
+    )
+  }
+  if expected == 1 {
+    assert_true(result.stderr().contains("full lowercase Git commit hash"))
+  }
+}
+
+///|
+async fn cleanup_fixture(root : String, repo : String) -> Unit {
+  if @env.get_env_var("OS") == Some("Windows_NT") &&
+    @fs.exists(repo + "/.git/objects") {
+    ignore(
+      @shell.Cmd("attrib.exe", ["-R", ".git\\objects\\*", "/S"], cwd=repo).output(),
+    )
+  }
+  @fs.rmdir(root, recursive=true)
+}
+
+///|
+async fn verify_action_reports(passed : String, blocked : String) -> Unit {
+  guard @json.parse(@fs.read_file(passed).text()[:]) is Object(report) &&
+    report.get("verdict") == Some(Json::string("passed")) else {
+    fail("expected a passed review from the composite action")
+  }
+  guard @json.parse(@fs.read_file(blocked).text()[:]) is Object(report) &&
+    report.get("verdict") == Some(Json::string("blocked")) &&
+    report.get("report") is Some(Object(findings)) &&
+    findings.get("regression_count") == Some(Json::number(2.0)) else {
+    fail("expected two regression intervals from the composite action")
+  }
+}
+
+///|
+async fn main {
+  match @env.args()[1:] {
+    [] => ()
+    [passed, blocked] => verify_action_reports(passed, blocked)
+    _ => fail("supply both composite action report paths or neither")
+  }
+  let root = @fs.tmpdir(prefix="batchcontour-pr-fixture-")
+  let repo = root + "/repo"
+  defer @async.protect_from_cancel(() => cleanup_fixture(root, repo))
+  @fs.mkdir(repo)
+  ignore(fixture_git(repo, ["init", "-q"]))
+  @fs.write_file(
+    repo + "/budget.json",
+    @fs.read_file("examples/pull-request/budget.json"),
+  )
+  @fs.write_file(
+    repo + "/plan.json",
+    @fs.read_file("examples/pull-request/baseline.json"),
+  )
+  @fs.write_file(
+    repo + "/policy.json",
+    @fs.read_file("examples/kubernetes/strict-policy.json"),
+  )
+  let base = fixture_commit(repo, "Baseline schedule")
+  @fs.write_file(
+    repo + "/plan.json",
+    @fs.read_file("examples/pull-request/candidate.json"),
+  )
+  @fs.write_file(repo + "/budget.json", "{}")
+  @fs.write_file(repo + "/policy.json", "{}")
+  let candidate = fixture_commit(
+    repo, "Changed schedule and unrelated policy edits",
+  )
+  @fs.write_file(repo + "/plan.json", "worktree edits do not affect the review")
+  let blocked = root + "/blocked.json"
+  review_fixture(repo, base, candidate, "policy.json", blocked, 2)
+  guard @json.parse(@fs.read_file(blocked).text()[:]) is Object(result) &&
+    result.get("base_commit") == Some(Json::string(base)) &&
+    result.get("candidate_commit") == Some(Json::string(candidate)) &&
+    result.get("verdict") == Some(Json::string("blocked")) &&
+    result.get("report") is Some(Object(report)) &&
+    report.get("violations") is Some(Array([Object(violation)])) &&
+    violation.get("metric") == Some(Json::string("possible_minutes")) else {
+    fail(
+      "PR review did not use the committed base policy and candidate schedule",
+    )
+  }
+  let invalid = root + "/invalid.json"
+  review_fixture(repo, "HEAD", candidate, "", invalid, 1)
+  assert_false(@fs.exists(invalid))
+  let passed = root + "/passed.json"
+  review_fixture(repo, base, base, "", passed, 0)
+  guard @json.parse(@fs.read_file(passed).text()[:]) is Object(result) &&
+    result.get("verdict") == Some(Json::string("passed")) else {
+    fail("baseline against itself should pass")
+  }
+  assert_eq(fixture_git(repo, ["status", "--porcelain"]), "M plan.json")
+  println("Verified passed, blocked and invalid commit-based reviews")
+}

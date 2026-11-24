@@ -1,0 +1,167 @@
+----
+import {
+  "moonbitlang/async@0.22.10/fs",
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+///|
+fn validate_revision(revision : String) -> Unit raise {
+  guard (revision.length() == 40 || revision.length() == 64) &&
+    revision[:].iter().all(ch => ch is ('0'..<='9' | 'a'..<='f')) else {
+    fail("expected a full lowercase Git commit hash")
+  }
+}
+
+///|
+fn validate_path(path : String) -> Unit raise {
+  guard path.length() <= 240 &&
+    path.has_suffix(".json") &&
+    path[:]
+    .iter()
+    .all(ch => {
+      ch is ('0'..<='9' | 'a'..<='z' | 'A'..<='Z' | '_' | '-' | '.' | '/')
+    }) else {
+    fail(
+      "expected a repository-relative JSON path using ASCII letters, digits, dots, hyphens or underscores",
+    )
+  }
+  for segment in path.split("/") {
+    guard !segment.is_empty() && segment != "." && segment != ".." else {
+      fail("empty or relative JSON path segment")
+    }
+  }
+}
+
+///|
+async fn git_read(repository : String, args : Array[String]) -> @shell.Output {
+  let result = @shell.Cmd(
+    "git",
+    ["--no-replace-objects", ..args],
+    cwd=repository,
+  ).output(timeout_ms=10000)
+  guard result.exit_code() == 0 else {
+    fail("git " + args.join(" ") + ": " + result.stderr())
+  }
+  result
+}
+
+///|
+async fn read_blob(
+  repository : String,
+  revision : String,
+  path : String,
+) -> Bytes {
+  validate_path(path)
+  let object = revision + ":" + path
+  let size = git_read(repository, ["cat-file", "-s", object]).stdout().trim()
+  guard size.length() > 0 &&
+    size.length() <= 7 &&
+    (size.length() < 7 || size.lexical_compare("1048576") <= 0) else {
+    fail("JSON blob exceeds 1 MiB: " + object)
+  }
+  git_read(repository, ["cat-file", "blob", object]).stdout_bytes()
+}
+
+///|
+async fn moon_cli(args : Array[String]) -> (String, Int32) {
+  let result = @shell.Cmd(
+    "moon",
+    ["run", "--deny-warn", "cmd/batchcontour", "--target", "wasm", "--", ..args],
+  ).output(timeout_ms=180000)
+  let code = result.exit_code()
+  guard code == 0 || code == 2 else { fail(result.stderr()) }
+  (result.stdout(), code)
+}
+
+///|
+async fn review_commits(
+  repository : String,
+  base : String,
+  candidate : String,
+  budget_path : String,
+  baseline_path : String,
+  candidate_path : String,
+  policy_path : String,
+  report_path : String,
+) -> Int32 {
+  for revision in [base, candidate] {
+    validate_revision(revision)
+    guard git_read(repository, ["rev-parse", "--verify", revision + "^{commit}"])
+      .stdout()
+      .trim() ==
+      revision else {
+      fail("expected Git commit " + revision)
+    }
+  }
+  let temp = @fs.tmpdir(prefix="batchcontour-pr-review-")
+  defer @fs.rmdir(temp, recursive=true)
+  let budget = temp + "/budget.json"
+  let baseline = temp + "/baseline.json"
+  let next = temp + "/candidate.json"
+  let review = temp + "/review.json"
+  @fs.write_file(budget, read_blob(repository, base, budget_path))
+  @fs.write_file(baseline, read_blob(repository, base, baseline_path))
+  @fs.write_file(next, read_blob(repository, candidate, candidate_path))
+  let (assembled, status) = moon_cli(["assemble", budget, baseline, next])
+  guard status == 0 else { fail("could not assemble review inputs") }
+  @fs.write_file(review, assembled)
+  let (report, result) = if policy_path.is_empty() {
+    moon_cli(["review", review])
+  } else {
+    let policy = temp + "/policy.json"
+    @fs.write_file(policy, read_blob(repository, base, policy_path))
+    moon_cli(["gate", review, policy])
+  }
+  let output : Json = {
+    "schema": Json::string("batchcontour.pr-review.v1"),
+    "base_commit": Json::string(base),
+    "candidate_commit": Json::string(candidate),
+    "budget_path": Json::string(budget_path),
+    "baseline_plan_path": Json::string(baseline_path),
+    "candidate_plan_path": Json::string(candidate_path),
+    "policy_path": if policy_path.is_empty() {
+      Json::null()
+    } else {
+      Json::string(policy_path)
+    },
+    "verdict": Json::string(if result == 0 { "passed" } else { "blocked" }),
+    "report": @json.parse(report[:]),
+  }
+  @fs.write_file(report_path, output.stringify() + "\n", create_mode=CreateNew)
+  println(
+    if result == 0 {
+      "BatchContour passed."
+    } else {
+      "BatchContour blocked the schedule change."
+    },
+  )
+  result
+}
+
+///|
+async fn main {
+  guard @env.args()[1:]
+    is [
+      repository,
+      base,
+      candidate,
+      budget,
+      baseline_plan,
+      candidate_plan,
+      policy,
+      report_path,
+    ] else {
+    fail(
+      "usage: moon run scripts/pr-review.mbtx -- REPO BASE_SHA CANDIDATE_SHA BUDGET BASELINE_PLAN CANDIDATE_PLAN POLICY_OR_EMPTY REPORT",
+    )
+  }
+  let code = review_commits(
+    repository, base, candidate, budget, baseline_plan, candidate_plan, policy, report_path,
+  )
+  if code != 0 {
+    @env.exit(code)
+  }
+}
