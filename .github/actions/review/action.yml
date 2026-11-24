@@ -29,6 +29,10 @@ runs:
       uses: hustcer/setup-moonbit@9199da0ab63ea0c0bab1dc15f03d76e17ed4f75f # v1.22
       env:
         GITHUB_TOKEN: ${{ github.token }}
+    - name: Refresh Mooncakes index
+      shell: bash
+      working-directory: ${{ github.action_path }}/../../..
+      run: moon update
     - name: Compare committed schedules
       shell: bash
       working-directory: ${{ github.action_path }}/../../..
