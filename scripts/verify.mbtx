@@ -1,6 +1,7 @@
 ----
 import {
   "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/async@0.22.10/fs",
   "moonbitlang/core/env",
   "moonbitlang/core/json",
 }
@@ -170,10 +171,33 @@ async fn verify_cli(target : String) -> Array[String] {
   let (duration_blocked, duration_passed, proposal) = verify_duration_cli(
     target,
   )
+  let evidence = verify_evidence_cli(target)
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
-    proposal,
+    proposal, evidence,
   ]
+}
+
+///|
+async fn verify_evidence_cli(target : String) -> String {
+  let plan = "examples/kubernetes/maintenance.json"
+  let (archive, _) = invoke_cli(target, ["archive-review", plan], 0)
+  let temp = @fs.tmpdir(prefix="batchcontour-archive-")
+  defer @fs.rmdir(temp, recursive=true)
+  let good = temp + "/accepted.json"
+  let bad = temp + "/tampered.json"
+  @fs.write_file(good, archive)
+  @fs.write_file(
+    bad,
+    archive.replace(old="\"verdict\":\"blocked\"", new="\"verdict\":\"passed\""),
+  )
+  let (empty, error) = invoke_cli(target, ["verify-evidence", plan, bad], 1)
+  assert_eq(empty, "")
+  assert_true(error.contains("$.report.verdict"))
+  let (verified, _) = invoke_cli(target, ["verify-evidence", plan, good], 0)
+  let (expected, _) = demo(target, "maintenance", 2)
+  assert_eq(verified, expected)
+  archive
 }
 
 ///|

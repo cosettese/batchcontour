@@ -10,7 +10,7 @@ impl Show for FileError with fn output(self, logger) {
 }
 
 ///|
-async fn read_input(path : String) -> String {
+async fn read_input(path : String, archive~ : Bool = false) -> String {
   let file = @fs.open(path, mode=ReadOnly) catch {
     _ => raise FileError("cannot open the input file")
   }
@@ -18,14 +18,17 @@ async fn read_input(path : String) -> String {
   guard file.kind() == @fs.Regular else {
     raise FileError("expected a regular UTF-8 file")
   }
-  let max_bytes = 1_048_576
-  guard file.size() <= max_bytes.to_int64() else {
-    raise FileError("input file exceeds 1 MiB")
+  let max_bytes = if archive { 32 * 1024 * 1024 } else { 1_048_576 }
+  let size_error = if archive {
+    "archive file exceeds 32 MiB"
+  } else {
+    "input file exceeds 1 MiB"
   }
+  guard file.size() <= max_bytes.to_int64() else { raise FileError(size_error) }
   let buffer = @buffer.Buffer()
   while file.read() is Some(chunk) {
     guard chunk.length() <= max_bytes - buffer.length() else {
-      raise FileError("input file exceeds 1 MiB")
+      raise FileError(size_error)
     }
     buffer.write_bytes(chunk)
   }
@@ -39,6 +42,8 @@ let usage =
   #|Usage: batchcontour review INPUT.json
   #|       batchcontour summarize INPUT.json
   #|       batchcontour gate INPUT.json POLICY.json
+  #|       batchcontour archive-review INPUT.json
+  #|       batchcontour verify-evidence INPUT.json ARCHIVE.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
   #|       batchcontour propose-durations INPUT.json HISTORY.json
 
@@ -93,24 +98,44 @@ async fn run(args : ArrayView[String]) -> Int32 {
       @stdio.stdout.text.write(usage + "\n")
       0
     }
-    ["review" | "summarize" as command, path] =>
+    ["review" | "summarize" | "archive-review" as command, path] =>
       try {
         let input = @capacity.ReviewInput::from_json(read_input(path))
-        let report = @capacity.compare_capacity(input)
-        let output = if command == "summarize" {
-          report.summary_json()
+        let (output, status) = if command == "archive-review" {
+          (@capacity.archive_capacity_review(input), 0)
         } else {
-          report.to_json()
+          let report = @capacity.compare_capacity(input)
+          let output = if command == "summarize" {
+            report.summary_json()
+          } else {
+            report.to_json()
+          }
+          (output, if report.has_regressions() { 2 } else { 0 })
         }
         @stdio.stdout.text.write(output.stringify() + "\n")
-        if report.has_regressions() {
-          2
-        } else {
-          0
-        }
+        status
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{path}: \{error}\n")
+          1
+        }
+      }
+    ["verify-evidence", plan_path, archive_path] =>
+      try {
+        let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+          error => raise FileError("\{plan_path}: \{error}")
+        }
+        let report = @capacity.verify_capacity_evidence(
+          input,
+          read_input(archive_path, archive=true),
+        ) catch {
+          error => raise FileError("\{archive_path}: \{error}")
+        }
+        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+        0
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
           1
         }
       }
