@@ -137,6 +137,23 @@ async fn verify_cli(target : String) -> Array[String] {
     fail("incorrect maintenance report on " + target)
   }
   println("CLI file workflow verified on " + target)
+  let (existing, _) = demo(target, "existing-overload", 0)
+  let (gate, _) = invoke_cli(
+    target,
+    [
+      "gate", "examples/kubernetes/existing-overload.json", "examples/kubernetes/strict-policy.json",
+    ],
+    2,
+  )
+  let gate_json = @json.parse(gate[:])
+  guard gate_json is Object(fields) &&
+    fields.get("regression_blocked") == Some(Json::boolean(false)) &&
+    fields.get("violations") is Some(Array([Object(violation)])) &&
+    violation.get("metric") == Some(Json::string("possible_minutes")) &&
+    violation.get("limit") == Some(Json::number(1.0)) &&
+    violation.get("actual") == Some(Json::number(2.0)) else {
+    fail("incorrect absolute policy gate on " + target)
+  }
   let (summary, _) = invoke_cli(
     target,
     ["summarize", "examples/kubernetes/maintenance.json"],
@@ -154,7 +171,8 @@ async fn verify_cli(target : String) -> Array[String] {
     target,
   )
   [
-    before, after, maintenance, summary, duration_blocked, duration_passed, proposal,
+    before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
+    proposal,
   ]
 }
 

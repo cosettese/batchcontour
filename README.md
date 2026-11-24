@@ -35,6 +35,12 @@ CI 日志可以用 `summarize` 查看每种资源的超载分钟数、峰值缺�
 moon run cmd/batchcontour --target wasm -- summarize examples/kubernetes/maintenance.json
 ```
 
+资源有硬性限制时，可以在回归检查之外配置绝对容量门禁。示例的新旧排程相同，但候选有 2 分钟可能超载，超过策略允许的 1 分钟，因此退出 **2**。 [容量门禁](docs/capacity-policy.md)
+
+```sh
+moon run cmd/batchcontour --target wasm -- gate examples/kubernetes/existing-overload.json examples/kubernetes/strict-policy.json
+```
+
 提交排程前也可以核对历史时长。下例里候选任务 `can-2` 运行了 143 秒，超过声明的 120 秒上限，命令退出 **2**。报告还会标出缺乏足够样本的任务。[时长记录格式与用法](docs/duration-evidence.md)
 
 ```sh
@@ -45,7 +51,7 @@ moon run cmd/batchcontour --target wasm -- verify-durations examples/kubernetes/
 
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.5.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.6.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)

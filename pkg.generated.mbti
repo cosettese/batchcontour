@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn check_capacity_policy(ReviewInput, CapacityPolicy) -> CapacityGate raise ReviewError
+
 pub fn check_durations(ReviewInput, RunHistory) -> DurationReport raise ReviewError
 
 pub fn compare_capacity(ReviewInput) -> CapacityReport raise ReviewError
@@ -22,12 +24,29 @@ pub(all) suberror ReviewError {
 pub impl Show for ReviewError
 
 // Types and methods
+type CapacityGate
+pub fn CapacityGate::has_failures(Self) -> Bool
+pub fn CapacityGate::regression_blocked(Self) -> Bool
+pub fn CapacityGate::to_json(Self) -> @json.Json
+pub fn CapacityGate::violations(Self) -> ArrayView[CapacityViolation]
+
+type CapacityPolicy
+pub fn CapacityPolicy::from_json(String) -> Self raise ReviewError
+pub fn CapacityPolicy::to_json(Self) -> @json.Json
+
 type CapacityReport
 pub fn CapacityReport::findings(Self) -> ArrayView[Finding]
 pub fn CapacityReport::has_regressions(Self) -> Bool
 pub fn CapacityReport::summaries(Self) -> Array[ResourceSummary]
 pub fn CapacityReport::summary_json(Self) -> @json.Json
 pub fn CapacityReport::to_json(Self) -> @json.Json
+
+pub struct CapacityViolation {
+  resource : String
+  metric : String
+  limit : Int64
+  actual : Int64
+}
 
 pub struct Contribution {
   job_id : String

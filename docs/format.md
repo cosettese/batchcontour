@@ -89,3 +89,6 @@ the same resource. Improvements elsewhere do not offset those minutes, so
 the summary's verdict matches the detailed report. For job-level evidence
 use `review`. Downstream MoonBit code can use `CapacityReport::summaries`
 or encode the same summary with `summary_json`.
+
+[Absolute policies](capacity-policy.md) use these measurements to constrain
+the candidate even if its overload already existed in the baseline.

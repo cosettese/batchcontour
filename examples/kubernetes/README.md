@@ -28,3 +28,7 @@ window's effective capacity.
 The [duration evidence example](../../docs/duration-evidence.md) adds
 synthetic completed runs for the two versions of `hello`. The same
 verification script exercises accepted, out-of-range and malformed history.
+
+The [absolute policy example](../../docs/capacity-policy.md) reuses the same
+public schedule with synthetic demands to show a pre-existing overload that
+passes change review and fails the configured overload ceiling.

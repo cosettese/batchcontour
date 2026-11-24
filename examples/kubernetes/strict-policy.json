@@ -1,0 +1,9 @@
+{
+  "schema": "batchcontour.capacity-policy.v1",
+  "resources": {
+    "worker-slots": {
+      "possible_minutes": 1,
+      "peak_maximum_excess": 1
+    }
+  }
+}

@@ -38,6 +38,7 @@ async fn read_input(path : String) -> String {
 let usage =
   #|Usage: batchcontour review INPUT.json
   #|       batchcontour summarize INPUT.json
+  #|       batchcontour gate INPUT.json POLICY.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
   #|       batchcontour propose-durations INPUT.json HISTORY.json
 
@@ -67,6 +68,25 @@ async fn duration_command(
 }
 
 ///|
+async fn gate_command(plan_path : String, policy_path : String) -> Int32 {
+  let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+    error => raise FileError("\{plan_path}: \{error}")
+  }
+  let policy = @capacity.CapacityPolicy::from_json(read_input(policy_path)) catch {
+    error => raise FileError("\{policy_path}: \{error}")
+  }
+  let gate = @capacity.check_capacity_policy(input, policy) catch {
+    error => raise FileError("\{plan_path}, \{policy_path}: \{error}")
+  }
+  @stdio.stdout.text.write(gate.to_json().stringify() + "\n")
+  if gate.has_failures() {
+    2
+  } else {
+    0
+  }
+}
+
+///|
 async fn run(args : ArrayView[String]) -> Int32 {
   match args {
     ["--help"] => {
@@ -91,6 +111,13 @@ async fn run(args : ArrayView[String]) -> Int32 {
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{path}: \{error}\n")
+          1
+        }
+      }
+    ["gate", plan_path, policy_path] =>
+      gate_command(plan_path, policy_path) catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
           1
         }
       }
