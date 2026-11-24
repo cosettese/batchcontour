@@ -135,6 +135,7 @@ fn read_jobs(
   value : Json,
   capacities : Array[Capacity],
   path : String,
+  launch_window? : (Int64, Int64),
 ) -> Array[Job] raise ReviewError {
   guard value is Array(items) && items.length() <= max_jobs else {
     raise InvalidInput(path~, detail="expected an array of at most 128 jobs")
@@ -143,11 +144,21 @@ fn read_jobs(
   let seen : Map[String, Unit] = Map([])
   for index, item in items {
     let job_path = path + "[\{index}]"
-    let fields = read_object(
-      item,
-      ["id", "cron", "min_minutes", "max_minutes", "demand"],
-      job_path,
-    )
+    let fields = if launch_window is Some(_) {
+      read_object(
+        item,
+        [
+          "id", "cron", "min_minutes", "max_minutes", "demand", "launch_overrides",
+        ],
+        job_path,
+      )
+    } else {
+      read_object(
+        item,
+        ["id", "cron", "min_minutes", "max_minutes", "demand"],
+        job_path,
+      )
+    }
     let id = read_id(fields["id"], job_path + ".id")
     guard !seen.contains(id) else {
       raise InvalidInput(path=job_path + ".id", detail="duplicate job ID " + id)
@@ -172,7 +183,25 @@ fn read_jobs(
       capacities,
       job_path + ".demand",
     )
-    jobs.push({ id, expression, cron, min_minutes, max_minutes, demands, })
+    let launch_overrides = match launch_window {
+      Some((start, end)) =>
+        read_launch_overrides(
+          fields["launch_overrides"],
+          start - max_minutes.to_int64() + 1L,
+          end,
+          job_path + ".launch_overrides",
+        )
+      None => Map([])
+    }
+    jobs.push({
+      id,
+      expression,
+      cron,
+      min_minutes,
+      max_minutes,
+      demands,
+      launch_overrides,
+    })
   }
   // Job order has no semantic effect. Keep IDs stable for the sweep and output.
   jobs.sort_by((a, b) => a.id[:].lexical_compare(b.id[:]))
@@ -195,22 +224,23 @@ fn parse_document(text : String) -> Json raise ReviewError {
 }
 
 ///|
-/// Decode and validate a v1 or v2 review. Unknown and duplicate keys fail.
+/// Decode and validate a v1, v2 or v3 review. Unknown and duplicate keys fail.
 pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
   let value = parse_document(text)
   guard value is Object(root) else {
     raise InvalidInput(path="$", detail="expected an object")
   }
   let schema = match root.get("schema") {
-    Some(String(name)) if name == input_schema || name == timed_input_schema =>
-      name
+    Some(String(name)) if name == input_schema ||
+      name == timed_input_schema ||
+      name == launch_input_schema => name
     _ =>
       raise InvalidInput(
         path="$.schema",
-        detail="expected " + input_schema + " or " + timed_input_schema,
+        detail="expected a batchcontour.input.v1, v2 or v3 schema",
       )
   }
-  let fields = if schema == timed_input_schema {
+  let fields = if schema != input_schema {
     read_object(
       value,
       [
@@ -241,7 +271,7 @@ pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
     )
   }
   let capacities = read_capacities(fields["capacities"])
-  if schema == timed_input_schema {
+  if schema != input_schema {
     read_capacity_overrides(
       fields["capacity_overrides"],
       capacities,
@@ -249,26 +279,49 @@ pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
       end,
     )
   }
-  let baseline = read_jobs(fields["baseline"], capacities, "$.baseline")
-  let candidate = read_jobs(fields["candidate"], capacities, "$.candidate")
+  let launch_window = if schema == launch_input_schema {
+    Some((start, end))
+  } else {
+    None
+  }
+  let baseline = read_jobs(
+    fields["baseline"],
+    capacities,
+    "$.baseline",
+    launch_window?,
+  )
+  let candidate = read_jobs(
+    fields["candidate"],
+    capacities,
+    "$.candidate",
+    launch_window?,
+  )
   { schema, start, end, capacities, baseline, candidate, }
 }
 
 ///|
-fn job_json(job : Job, capacities : Array[Capacity]) -> Json {
+fn job_json(
+  job : Job,
+  capacities : Array[Capacity],
+  with_launches : Bool,
+) -> Json {
   let demands : Map[String, Json] = Map([])
   for demand in job.demands {
     demands[capacities[demand.resource_index].resource] = Json::number(
       demand.units.to_double(),
     )
   }
-  {
+  let fields : Map[String, Json] = {
     "id": Json::string(job.id),
     "cron": Json::string(job.expression),
     "min_minutes": Json::number(job.min_minutes.to_double()),
     "max_minutes": Json::number(job.max_minutes.to_double()),
     "demand": Json::object(demands),
   }
+  if with_launches {
+    fields["launch_overrides"] = launch_overrides_json(job.launch_overrides)
+  }
+  Json::object(fields)
 }
 
 ///|
@@ -279,6 +332,7 @@ fn window_json(start : Int64, end : Int64) -> Json {
 ///|
 /// Canonical serialization. The original cron expression text is preserved.
 pub fn ReviewInput::to_json(self : ReviewInput) -> Json {
+  let with_launches = self.schema == launch_input_schema
   let capacities : Map[String, Json] = Map([])
   for capacity in self.capacities {
     capacities[capacity.resource] = Json::number(capacity.units.to_double())
@@ -288,13 +342,13 @@ pub fn ReviewInput::to_json(self : ReviewInput) -> Json {
     "window": window_json(self.start, self.end),
     "capacities": Json::object(capacities),
     "baseline": Json::array(
-      self.baseline.map(job => job_json(job, self.capacities)),
+      self.baseline.map(job => job_json(job, self.capacities, with_launches)),
     ),
     "candidate": Json::array(
-      self.candidate.map(job => job_json(job, self.capacities)),
+      self.candidate.map(job => job_json(job, self.capacities, with_launches)),
     ),
   }
-  if self.schema == timed_input_schema {
+  if self.schema != input_schema {
     fields["capacity_overrides"] = overrides_json(self.capacities)
   }
   Json::object(fields)

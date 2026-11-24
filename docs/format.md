@@ -1,8 +1,9 @@
 # Formats and review semantics
 
 A review file describes both versions of a schedule and their shared capacity
-budget. Use `batchcontour.input.v1` for a fixed budget or
-`batchcontour.input.v2` to supply a capacity timeline.
+budget. Use `batchcontour.input.v1` for a fixed budget,
+`batchcontour.input.v2` for a capacity timeline, or
+`batchcontour.input.v3` to specify individual launch decisions as well.
 
 | Field | Accepted value |
 |---|---|
@@ -13,7 +14,18 @@ budget. Use `batchcontour.input.v1` for a fixed budget or
 | Job `cron` | Numeric five-field cron in UTC, with spaces or tabs between fields. See the dialect below. |
 | Job `min_minutes`, `max_minutes` | Integral duration bounds, from 1 through 10,080 minutes, in ascending order. |
 | Job `demand` | Object mapping at least one declared resource to an integer from 1 through 1,000,000. Each resource uses its own unit. |
-| `capacity_overrides` | Required in v2. Array of 0–512 objects with `resource`, `start`, `end`, and `units`. Each interval replaces the capacity of that resource for both plans. |
+| `capacity_overrides` | Required in v2 and v3. Array of 0–512 objects with `resource`, `start`, `end`, and `units`. Each interval replaces the capacity of that resource for both plans. |
+| Job `launch_overrides` | Required in v3. Array of 0–128 objects with a UTC minute `at` and a boolean `run`. |
+
+An explicit launch decision takes priority over cron for that job and minute.
+Use `true` to make one launch happen, including a one-time backfill, or
+`false` to suppress one. A true decision at a scheduled minute still produces
+only one run. Duplicate decisions and starts that could never overlap the
+review window are rejected. Carry-in starts before the window are accepted
+when the job can still be running in it. Decisions sort by UTC minute in the
+canonical input and retain the job's original duration and demand. The
+[maintenance example](../examples/kubernetes/skip-maintenance.json) cancels
+two launches to keep the workload within the temporarily reduced budget.
 
 An override uses the same UTC timestamps and capacity bounds as the default.
 The resource must exist in `capacities`. Every override must have positive
@@ -58,7 +70,7 @@ either excess bound on any interval. It can pass with pre-existing overload,
 which is still reported. `regression_count` counts flagged resource intervals,
 with evidence and capacity boundaries allowed to split otherwise contiguous
 intervals. A finding's `capacity` is the effective value for its interval.
-Both input versions emit the same report schema.
+All three input versions emit the same report schema.
 
 The report lists each possible contributor with the original run start and its
 units. Entries with `guaranteed: true` make up the lower bound, all entries make

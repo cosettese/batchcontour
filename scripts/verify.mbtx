@@ -172,6 +172,11 @@ async fn verify_cli(target : String) -> Array[String] {
     target,
   )
   let evidence = verify_evidence_cli(target)
+  let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
+  guard @json.parse(skip_maintenance[:]) is Object(fields) &&
+    fields.get("findings") is Some(Array([])) else {
+    fail("launch cancellations did not clear the maintenance conflict")
+  }
   let (scenarios, _) = invoke_cli(
     target,
     [
@@ -190,7 +195,7 @@ async fn verify_cli(target : String) -> Array[String] {
   }
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
-    proposal, evidence, scenarios,
+    proposal, evidence, scenarios, skip_maintenance,
   ]
 }
 

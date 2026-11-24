@@ -1,0 +1,20 @@
+{
+  "schema": "batchcontour.input.v3",
+  "window": { "start": "2026-11-23T02:00:00Z", "end": "2026-11-23T02:05:00Z" },
+  "capacities": { "worker-slots": 2 },
+  "capacity_overrides": [
+    { "resource": "worker-slots", "start": "2026-11-23T02:02:00Z", "end": "2026-11-23T02:04:00Z", "units": 1 }
+  ],
+  "baseline": [
+    { "id": "hello", "cron": "*/5 * * * *", "min_minutes": 1, "max_minutes": 2, "demand": { "worker-slots": 1 }, "launch_overrides": [] }
+  ],
+  "candidate": [
+    {
+      "id": "hello", "cron": "* * * * *", "min_minutes": 1, "max_minutes": 2, "demand": { "worker-slots": 1 },
+      "launch_overrides": [
+        { "at": "2026-11-23T02:01:00Z", "run": false },
+        { "at": "2026-11-23T02:03:00Z", "run": false }
+      ]
+    }
+  ]
+}

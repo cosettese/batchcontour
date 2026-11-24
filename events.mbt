@@ -64,7 +64,14 @@ fn expand_plan(
     let moment = utc_moment(minute)
     for job in jobs {
       let possible_end = minute + job.max_minutes.to_int64()
-      if possible_end <= start || !job.cron.matches(moment) {
+      if possible_end <= start {
+        continue
+      }
+      let runs = match job.launch_overrides.get(minute) {
+        Some(run) => run
+        None => job.cron.matches(moment)
+      }
+      if !runs {
         continue
       }
       let guaranteed_end = minute + job.min_minutes.to_int64()

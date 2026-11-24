@@ -51,7 +51,7 @@ moon run cmd/batchcontour --target wasm -- verify-durations examples/kubernetes/
 
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.8.1`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.9.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)
@@ -66,6 +66,8 @@ let report_text = report.to_json().stringify()
 需要留存审查依据时，可用 `archive-review` 保存输入与完整结论。复核者用 `verify-evidence` 对照可信排程重新计算，检查结论及每条任务证据。 [归档与复核](docs/review-evidence.md)
 
 在同一份排程上可用 `scenarios` 对照多套容量预算，例如正常与维护降容。每个情景都有独立结论和缺口汇总。 [多情景示例](docs/scenarios.md)
+
+一次性补跑和停跑可以写入 v3 的 `launch_overrides`。维护示例保留原 cron，只跳过有冲突的两次启动，审查结果从阻断变为通过。 [停跑示例](examples/kubernetes/skip-maintenance.json)
 
 ## 验证
 

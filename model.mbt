@@ -5,6 +5,9 @@ let input_schema = "batchcontour.input.v1"
 let timed_input_schema = "batchcontour.input.v2"
 
 ///|
+let launch_input_schema = "batchcontour.input.v3"
+
+///|
 let max_input_units = 1_048_576
 
 ///|
@@ -71,6 +74,7 @@ priv struct Job {
   min_minutes : Int32
   max_minutes : Int32
   demands : Array[Demand]
+  launch_overrides : Map[Int64, Bool]
 }
 
 ///|
