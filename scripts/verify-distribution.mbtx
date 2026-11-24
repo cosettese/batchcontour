@@ -132,10 +132,10 @@ async fn main {
       ],
       cwd=work,
     )
-    guard result.contains("Total tests: 2, passed: 2, failed: 0.") else {
-      fail("expected both consumer tests on " + target + "\n" + result)
+    guard result.contains("Total tests: 3, passed: 3, failed: 0.") else {
+      fail("expected all three consumer tests on " + target + "\n" + result)
     }
-    println("Archive consumer \{target}: 2 tests passed")
+    println("Archive consumer \{target}: 3 tests passed")
   }
   let digest = @crypto.sha256(@fs.read_file(archive).binary())
   println(

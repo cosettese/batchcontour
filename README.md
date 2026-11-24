@@ -49,9 +49,15 @@ moon run cmd/batchcontour --target wasm -- verify-durations examples/kubernetes/
 
 样本足够时，可以用 `propose-durations` 生成一份更新后的排程文件。示例中候选任务的上限会从 2 分钟扩到 3 分钟，生成的文件可以直接交给容量审查。 [提案流程](docs/duration-evidence.md#propose-wider-bounds)
 
+要复盘已完成任务，可以把起止时间和排程声明的用量交给 `replay-history`。下例报出两个任务在降容期间重叠的 30 秒，并列出运行 ID。 [历史回放](docs/history-replay.md)
+
+```sh
+moon run cmd/batchcontour --target wasm -- replay-history examples/kubernetes/maintenance.json examples/kubernetes/replay-runs.json candidate
+```
+
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.10.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.11.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)

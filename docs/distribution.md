@@ -14,12 +14,12 @@ into a fresh temporary workspace alongside a separate consumer module.
 The library under test comes from the archive. The consumer imports
 `cosettese/batchcontour` by its public path and uses only its exported API.
 
-The two consumer tests cover creating and verifying a capacity review
-archive, applying a release policy and reviewing a new schedule after a
-historical duration proposal. They use the public Kubernetes example cron
-with synthetic capacities, demands and history. The script requires both
-tests to execute on each requested backend. It prints the archive member
-count and SHA-256 before removing the temporary workspace.
+The three consumer tests cover creating and verifying a capacity review
+archive, applying a release policy, reviewing a new schedule after a
+historical duration proposal, and replaying completed runs. They use the public
+Kubernetes example cron with synthetic capacities, demands and history. The
+script requires all three tests to execute on each requested backend. It
+prints the archive member count and SHA-256 before removing the workspace.
 
 `portable` tests Wasm, Wasm-GC and JavaScript. `all` also builds and runs
 the Native consumer with a compatible C toolchain. Extraction uses

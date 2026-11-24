@@ -79,6 +79,27 @@ fn read_capacity_overrides(
 }
 
 ///|
+fn Capacity::band_at(
+  self : Capacity,
+  at : Int64,
+  end : Int64,
+  index : Int32,
+  units_per_minute : Int64,
+) -> (Int32, Int64, Int32) {
+  let mut next = index
+  while self.overrides.get(next) is Some(period) &&
+        period.end * units_per_minute <= at {
+    next += 1
+  }
+  match self.overrides.get(next) {
+    Some(period) if period.start * units_per_minute <= at =>
+      (period.units, period.end * units_per_minute, next)
+    Some(period) => (self.units, period.start * units_per_minute, next)
+    None => (self.units, end, next)
+  }
+}
+
+///|
 fn overrides_json(capacities : Array[Capacity]) -> Json {
   let entries : Array[Json] = []
   for capacity in capacities {

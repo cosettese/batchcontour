@@ -9,6 +9,13 @@ fn utc_text(minute : Int64) -> String {
 }
 
 ///|
+fn utc_second_text(second : Int64) -> String {
+  @moondate.Moment::of_epoch(second, zone=@moondate.Utc).strftime(
+    "%Y-%m-%dT%H:%M:%SZ",
+  )
+}
+
+///|
 fn parse_utc(text : String, path : String) -> Int64 raise ReviewError {
   parse_utc_timestamp(text, path, minute_aligned=true) / 60L
 }
@@ -45,10 +52,9 @@ fn parse_utc_timestamp(
   guard moment.epoch() is Some(second) else {
     raise InvalidInput(path~, detail~)
   }
-  let canonical = @moondate.Moment::of_epoch(second, zone=@moondate.Utc).strftime(
-    "%Y-%m-%dT%H:%M:%SZ",
-  )
-  guard canonical == text else { raise InvalidInput(path~, detail~) }
+  guard utc_second_text(second) == text else {
+    raise InvalidInput(path~, detail~)
+  }
   second
 }
 

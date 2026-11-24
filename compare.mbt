@@ -92,16 +92,10 @@ fn review_resource(
   let mut cursor = window_start
   while cursor < end {
     let start = cursor
-    while budget.overrides.get(override_index) is Some(period) &&
-          period.end <= start {
-      override_index += 1
-    }
-    let (units, next_budget_boundary) = match
-      budget.overrides.get(override_index) {
-      Some(period) if period.start <= start => (period.units, period.end)
-      Some(period) => (budget.units, period.start)
-      None => (budget.units, end)
-    }
+    let (units, next_budget_boundary, next_override) = budget.band_at(
+      start, end, override_index, 1L,
+    )
+    override_index = next_override
     // Apply all changes at the boundary before looking at the next interval.
     while index < events.length() && events[index].minute == start {
       let event = events[index]

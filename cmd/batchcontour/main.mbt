@@ -48,6 +48,7 @@ let usage =
   #|       batchcontour verify-evidence INPUT.json ARCHIVE.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
   #|       batchcontour propose-durations INPUT.json HISTORY.json
+  #|       batchcontour replay-history INPUT.json HISTORY.json baseline|candidate
 
 ///|
 async fn duration_command(
@@ -180,6 +181,30 @@ async fn run(args : ArrayView[String]) -> Int32 {
           0
         } else {
           2
+        }
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["replay-history", plan_path, history_path, plan] =>
+      try {
+        let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+          error => raise FileError("\{plan_path}: \{error}")
+        }
+        let report = @capacity.replay_history(
+          input,
+          @capacity.RunHistory::from_json(read_input(history_path)),
+          plan,
+        ) catch {
+          error => raise FileError("\{history_path}: \{error}")
+        }
+        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+        if report.has_failures() {
+          2
+        } else {
+          0
         }
       } catch {
         error => {

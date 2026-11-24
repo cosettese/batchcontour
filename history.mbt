@@ -11,6 +11,7 @@ priv struct Observation {
   run_id : String
   started_at : String
   finished_at : String
+  start_second : Int64
   elapsed_seconds : Int64
   source_index : Int32
 }
@@ -66,6 +67,7 @@ fn read_observation(
     run_id,
     started_at,
     finished_at,
+    start_second: start,
     elapsed_seconds: end - start,
     source_index: index,
   }

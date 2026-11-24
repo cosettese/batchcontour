@@ -187,6 +187,7 @@ async fn verify_cli(target : String) -> Array[String] {
     drop.get("verdict") == Some(Json::string("launch_count_changed")) else {
     fail("incorrect repair recommendation on " + target)
   }
+  let (replay_blocked, replay_passed) = verify_history_replay(target)
   let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
   guard @json.parse(skip_maintenance[:]) is Object(fields) &&
     fields.get("findings") is Some(Array([])) else {
@@ -210,8 +211,39 @@ async fn verify_cli(target : String) -> Array[String] {
   }
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
-    proposal, evidence, scenarios, skip_maintenance, repair,
+    proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
   ]
+}
+
+///|
+async fn verify_history_replay(target : String) -> (String, String) {
+  let plan = "examples/kubernetes/maintenance.json"
+  let history = "examples/kubernetes/replay-runs.json"
+  let (blocked, _) = invoke_cli(
+    target,
+    ["replay-history", plan, history, "candidate"],
+    2,
+  )
+  guard @json.parse(blocked[:]) is Object(report) &&
+    report.get("overloads") is Some(Array([Object(overload)])) &&
+    overload.get("start") == Some(Json::string("2026-11-23T02:02:15Z")) &&
+    overload.get("end") == Some(Json::string("2026-11-23T02:02:45Z")) &&
+    overload.get("occupied_units") == Some(Json::number(2.0)) &&
+    overload.get("capacity") == Some(Json::number(1.0)) &&
+    overload.get("runs") is Some(Array([String("early"), String("later")])) else {
+    fail("incorrect history replay overload on " + target)
+  }
+  let (passed, _) = invoke_cli(
+    target,
+    ["replay-history", plan, history, "baseline"],
+    0,
+  )
+  guard @json.parse(passed[:]) is Object(report) &&
+    report.get("overloads") is Some(Array([])) &&
+    report.get("verdict") == Some(Json::string("passed")) else {
+    fail("incorrect baseline history replay on " + target)
+  }
+  (blocked, passed)
 }
 
 ///|

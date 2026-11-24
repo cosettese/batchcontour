@@ -1,0 +1,9 @@
+{
+  "schema": "batchcontour.history.v1",
+  "min_samples": 1,
+  "runs": [
+    { "plan": "baseline", "job": "hello", "id": "base", "started_at": "2026-11-23T02:00:05Z", "finished_at": "2026-11-23T02:01:20Z" },
+    { "plan": "candidate", "job": "hello", "id": "early", "started_at": "2026-11-23T02:01:30Z", "finished_at": "2026-11-23T02:02:45Z" },
+    { "plan": "candidate", "job": "hello", "id": "later", "started_at": "2026-11-23T02:02:15Z", "finished_at": "2026-11-23T02:03:30Z" }
+  ]
+}

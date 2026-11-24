@@ -32,3 +32,7 @@ verification script exercises accepted, out-of-range and malformed history.
 The [absolute policy example](../../docs/capacity-policy.md) reuses the same
 public schedule with synthetic demands to show a pre-existing overload that
 passes change review and fails the configured overload ceiling.
+
+The [history replay example](../../docs/history-replay.md) uses synthetic
+completed-run timestamps. The two candidate runs hold both slots for 30 seconds
+inside the maintenance period when only one slot is available.

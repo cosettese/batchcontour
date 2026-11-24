@@ -48,3 +48,22 @@ test "external module can create a new review from runtime evidence" {
   assert_false(@batchcontour.check_durations(reloaded, history).has_failures())
   assert_true(@batchcontour.compare_capacity(reloaded).has_regressions())
 }
+
+///|
+test "external module can replay overlapping completed runs" {
+  let input = @batchcontour.ReviewInput::from_json(external_review)
+  let history = @batchcontour.RunHistory::from_json(
+    (
+      #|{"schema":"batchcontour.history.v1","min_samples":1,"runs":[
+      #|{"id":"first","plan":"candidate","job":"hello","started_at":"2026-11-23T02:01:30Z","finished_at":"2026-11-23T02:02:30Z"},
+      #|{"id":"second","plan":"candidate","job":"hello","started_at":"2026-11-23T02:02:05Z","finished_at":"2026-11-23T02:03:05Z"}]}
+    ),
+  )
+  let replay = @batchcontour.replay_history(input, history, "candidate")
+  assert_true(replay.has_failures())
+  assert_eq(replay.coverage()[0].sample_count, 2)
+  let spans = replay.overloads()
+  assert_eq(spans.length(), 1)
+  assert_eq(spans[0].until_second - spans[0].from_second, 25L)
+  assert_eq(spans[0].run_ids.to_owned(), ["first", "second"])
+}
