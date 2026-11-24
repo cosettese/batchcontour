@@ -189,6 +189,7 @@ async fn verify_cli(target : String) -> Array[String] {
   }
   let (replay_blocked, replay_passed) = verify_history_replay(target)
   let imported = verify_kubernetes_import(target)
+  let assembled = verify_review_documents(target, maintenance)
   let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
   guard @json.parse(skip_maintenance[:]) is Object(fields) &&
     fields.get("findings") is Some(Array([])) else {
@@ -213,8 +214,46 @@ async fn verify_cli(target : String) -> Array[String] {
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
     proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
-    imported,
+    imported, assembled,
   ]
+}
+
+///|
+async fn verify_review_documents(target : String, expected : String) -> String {
+  let (assembled, _) = invoke_cli(
+    target,
+    [
+      "assemble", "examples/pull-request/budget.json", "examples/pull-request/baseline.json",
+      "examples/pull-request/candidate.json",
+    ],
+    0,
+  )
+  let temp = @fs.tmpdir(prefix="batchcontour-documents-")
+  defer @fs.rmdir(temp, recursive=true)
+  let path = temp + "/review.json"
+  @fs.write_file(path, assembled)
+  let (result, _) = invoke_cli(target, ["review", path], 2)
+  assert_eq(result, expected)
+  let (split, _) = invoke_cli(
+    target,
+    ["split", "examples/kubernetes/maintenance.json"],
+    0,
+  )
+  guard @json.parse(split[:]) is Object(parts) else {
+    fail("expected separate parts from a legacy review on " + target)
+  }
+  let paths = ["budget", "baseline", "candidate"].map(name => {
+    temp + "/" + name + ".json"
+  })
+  for index, name in ["budget", "baseline", "candidate"] {
+    guard parts.get(name) is Some(part) else {
+      fail("missing review part " + name)
+    }
+    @fs.write_file(paths[index], part.stringify())
+  }
+  let (roundtrip, _) = invoke_cli(target, ["assemble", ..paths], 0)
+  assert_eq(roundtrip, assembled)
+  assembled
 }
 
 ///|

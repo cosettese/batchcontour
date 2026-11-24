@@ -9,6 +9,8 @@ import {
 // Values
 pub fn archive_capacity_review(ReviewInput) -> @json.Json raise ReviewError
 
+pub fn assemble_review(String, String, String) -> ReviewInput raise ReviewError
+
 pub fn check_capacity_policy(ReviewInput, CapacityPolicy) -> CapacityGate raise ReviewError
 
 pub fn check_durations(ReviewInput, RunHistory) -> DurationReport raise ReviewError
@@ -157,8 +159,15 @@ pub struct ResourceSummary {
   regression_minutes : Int64
 }
 
+pub struct ReviewDocuments {
+  budget : @json.Json
+  baseline : @json.Json
+  candidate : @json.Json
+}
+
 type ReviewInput
 pub fn ReviewInput::from_json(String) -> Self raise ReviewError
+pub fn ReviewInput::split_documents(Self) -> ReviewDocuments
 pub fn ReviewInput::to_json(Self) -> @json.Json
 
 type RunHistory

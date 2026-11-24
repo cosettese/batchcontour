@@ -227,6 +227,25 @@ fn parse_document(
 }
 
 ///|
+fn read_review_window(
+  value : Json,
+  path : String,
+) -> (Int64, Int64) raise ReviewError {
+  let window = read_object(value, ["start", "end"], path)
+  let start_path = path + ".start"
+  let end_path = path + ".end"
+  let start = parse_utc(read_string(window["start"], start_path), start_path)
+  let end = parse_utc(read_string(window["end"], end_path), end_path)
+  guard end > start && end - start <= max_window_minutes.to_int64() else {
+    raise InvalidInput(
+      path~,
+      detail="window must be positive and at most 31 days",
+    )
+  }
+  (start, end)
+}
+
+///|
 /// Decode and validate a v1, v2 or v3 review. Unknown and duplicate keys fail.
 pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
   let value = parse_document(text)
@@ -258,21 +277,7 @@ pub fn ReviewInput::from_json(text : String) -> ReviewInput raise ReviewError {
       "$",
     )
   }
-  let window = read_object(fields["window"], ["start", "end"], "$.window")
-  let start = parse_utc(
-    read_string(window["start"], "$.window.start"),
-    "$.window.start",
-  )
-  let end = parse_utc(
-    read_string(window["end"], "$.window.end"),
-    "$.window.end",
-  )
-  guard end > start && end - start <= max_window_minutes.to_int64() else {
-    raise InvalidInput(
-      path="$.window",
-      detail="window must be positive and at most 31 days",
-    )
-  }
+  let (start, end) = read_review_window(fields["window"], "$.window")
   let capacities = read_capacities(fields["capacities"])
   if schema != input_schema {
     read_capacity_overrides(

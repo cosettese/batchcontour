@@ -50,6 +50,8 @@ let usage =
   #|       batchcontour propose-durations INPUT.json HISTORY.json
   #|       batchcontour replay-history INPUT.json HISTORY.json baseline|candidate
   #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE
+  #|       batchcontour assemble BUDGET.json BASELINE.json CANDIDATE.json
+  #|       batchcontour split INPUT.json
 
 ///|
 async fn duration_command(
@@ -186,6 +188,44 @@ async fn run(args : ArrayView[String]) -> Int32 {
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["assemble", budget, baseline, candidate] =>
+      try {
+        let budget_text = read_input(budget) catch {
+          error => raise FileError("\{budget}: \{error}")
+        }
+        let baseline_text = read_input(baseline) catch {
+          error => raise FileError("\{baseline}: \{error}")
+        }
+        let candidate_text = read_input(candidate) catch {
+          error => raise FileError("\{candidate}: \{error}")
+        }
+        let review = @capacity.assemble_review(
+          budget_text, baseline_text, candidate_text,
+        )
+        @stdio.stdout.text.write(review.to_json().stringify() + "\n")
+        0
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["split", path] =>
+      try {
+        let parts = @capacity.ReviewInput::from_json(read_input(path)).split_documents()
+        let output : Json = {
+          "budget": parts.budget,
+          "baseline": parts.baseline,
+          "candidate": parts.candidate,
+        }
+        @stdio.stdout.text.write(output.stringify() + "\n")
+        0
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{path}: \{error}\n")
           1
         }
       }

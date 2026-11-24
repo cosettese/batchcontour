@@ -1,0 +1,6 @@
+{
+  "schema": "batchcontour.plan.v1",
+  "jobs": [
+    { "id": "hello", "cron": "*/5 * * * *", "min_minutes": 1, "max_minutes": 2, "demand": { "worker-slots": 1 }, "launch_overrides": [] }
+  ]
+}
