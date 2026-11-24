@@ -1,0 +1,144 @@
+----
+import {
+  "moonbitlang/async@0.22.10/fs",
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/x@0.5.7/crypto",
+}
+----
+
+///|
+async fn checked(
+  program : String,
+  arguments : Array[String],
+  cwd? : String,
+) -> String {
+  let result = @shell.Cmd(program, arguments, cwd?).output(timeout_ms=180000)
+  if result.exit_code() != 0 {
+    fail(
+      "\{program} \{arguments.join(" ")} failed\n\{result.stdout()}\n\{result.stderr()}",
+    )
+  }
+  result.stdout() + result.stderr()
+}
+
+///|
+fn package_path(log : String) -> String raise {
+  for line in log.split("\n") {
+    let line = line.trim().to_owned()
+    if line.has_prefix("Package to ") {
+      let path = line[11:].to_owned()
+      if path.has_prefix("\\\\?\\") {
+        return path[4:].to_owned()
+      }
+      return path
+    }
+  }
+  fail("moon package did not report an archive path")
+}
+
+///|
+fn check_members(listing : String) -> Int32 raise {
+  let paths = listing
+    .replace_all(old="\\", new="/")
+    .split("\n")
+    .map(line => line.trim().to_owned())
+    .filter(path => !path.is_empty())
+    .collect()
+  let seen : Map[String, Unit] = Map([])
+  for path in paths {
+    guard !seen.contains(path) else { fail("duplicate archive member " + path) }
+    seen[path] = ()
+    for segment in path.split("/") {
+      guard segment != ".." &&
+        segment != "." &&
+        segment != ".git" &&
+        segment != "_build" &&
+        segment != ".mooncakes" &&
+        segment != ".moon" &&
+        segment != ".github" &&
+        segment != "target" &&
+        segment != "moon.work" &&
+        segment != "integration" else {
+        fail("unexpected archive member " + path)
+      }
+    }
+    guard !path.has_prefix("/") &&
+      !path.contains(":") &&
+      (path == "moon.mod" || !path.has_suffix("/moon.mod")) else {
+      fail("unexpected archive member " + path)
+    }
+  }
+  for
+    required in [
+      "moon.mod", "moon.pkg", "pkg.generated.mbti", "LICENSE", "README.md", "SOURCES.md",
+      "quickstart.mbt.md", "docs/review-evidence.md", "examples/kubernetes/capacity-scenarios.json",
+    ] {
+    guard paths.contains(required) else { fail("archive lacks " + required) }
+  }
+  paths.length()
+}
+
+///|
+async fn main {
+  let native = match @env.args()[1:] {
+    ["portable"] => false
+    ["all"] => true
+    _ => fail("usage: moon run scripts/verify-distribution.mbtx portable|all")
+  }
+  let temp = @fs.tmpdir(prefix="batchcontour-distribution-")
+  defer @fs.rmdir(temp, recursive=true)
+  let root = @fs.realpath(temp)
+  let archive = package_path(
+    checked("moon", ["package", "--list", "--target-dir", root + "/producer"]),
+  )
+  let windows = @env.get_env_var("OS") == Some("Windows_NT")
+  let listing = if windows {
+    checked("tar", ["-tf", archive])
+  } else {
+    checked("unzip", ["-Z1", archive])
+  }
+  let count = check_members(listing)
+  let work = root + "/workspace"
+  let library = work + "/library"
+  let consumer = work + "/consumer"
+  @fs.mkdir(work)
+  @fs.mkdir(library)
+  @fs.mkdir(consumer)
+  if windows {
+    ignore(checked("tar", ["-xf", archive, "-C", library]))
+  } else {
+    ignore(checked("unzip", ["-q", archive, "-d", library]))
+  }
+  for file in ["moon.mod", "moon.pkg", "workflow_test.mbt"] {
+    @fs.write_file(
+      consumer + "/" + file,
+      @fs.read_file("integration/consumer/" + file),
+    )
+  }
+  @fs.write_file(work + "/moon.work", "members = [\"library\", \"consumer\"]\n")
+  ignore(checked("moon", ["check", "--target", "all", "--deny-warn"], cwd=work))
+  let targets = if native {
+    ["wasm", "wasm-gc", "js", "native"]
+  } else {
+    ["wasm", "wasm-gc", "js"]
+  }
+  for target in targets {
+    let result = checked(
+      "moon",
+      [
+        "test", "--package", "cosettese/batchcontour-consumer", "--target", target,
+        "--deny-warn",
+      ],
+      cwd=work,
+    )
+    guard result.contains("Total tests: 2, passed: 2, failed: 0.") else {
+      fail("expected both consumer tests on " + target + "\n" + result)
+    }
+    println("Archive consumer \{target}: 2 tests passed")
+  }
+  let digest = @crypto.sha256(@fs.read_file(archive).binary())
+  println(
+    "Verified \{count} archive members, SHA-256 \{@crypto.bytes_to_hex_string(digest)}",
+  )
+}

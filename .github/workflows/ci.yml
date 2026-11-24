@@ -29,3 +29,5 @@ jobs:
       - run: moon run scripts/verify.mbtx all
       - name: Check generated interfaces
         run: git diff --exit-code -- pkg.generated.mbti cmd/batchcontour/pkg.generated.mbti
+      - name: Test downstream usage from the actual archive
+        run: moon run --deny-warn scripts/verify-distribution.mbtx all
