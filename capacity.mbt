@@ -4,8 +4,8 @@ fn read_capacity_overrides(
   capacities : Array[Capacity],
   window_start : Int64,
   window_end : Int64,
+  path~ : String = "$.capacity_overrides",
 ) -> Unit raise ReviewError {
-  let path = "$.capacity_overrides"
   guard value is Array(entries) else {
     raise InvalidInput(path~, detail="expected an array of capacity overrides")
   }

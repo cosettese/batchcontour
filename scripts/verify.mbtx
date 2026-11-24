@@ -172,9 +172,25 @@ async fn verify_cli(target : String) -> Array[String] {
     target,
   )
   let evidence = verify_evidence_cli(target)
+  let (scenarios, _) = invoke_cli(
+    target,
+    [
+      "scenarios", "examples/kubernetes/maintenance.json", "examples/kubernetes/capacity-scenarios.json",
+    ],
+    2,
+  )
+  let scenario_json = @json.parse(scenarios[:])
+  guard scenario_json is Object(fields) &&
+    fields.get("scenarios") is Some(Array([Object(reduced), Object(normal)])) &&
+    reduced.get("id") == Some(Json::string("maintenance")) &&
+    reduced.get("regression_count") == Some(Json::number(2.0)) &&
+    normal.get("id") == Some(Json::string("normal")) &&
+    normal.get("verdict") == Some(Json::string("passed")) else {
+    fail("incorrect capacity scenario report on " + target)
+  }
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
-    proposal, evidence,
+    proposal, evidence, scenarios,
   ]
 }
 

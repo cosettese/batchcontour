@@ -81,21 +81,21 @@ fn read_integer(
 }
 
 ///|
-fn read_capacities(value : Json) -> Array[Capacity] raise ReviewError {
+fn read_capacities(
+  value : Json,
+  path~ : String = "$.capacities",
+) -> Array[Capacity] raise ReviewError {
   guard value is Object(fields) &&
     !fields.is_empty() &&
     fields.length() <= max_resources else {
-    raise InvalidInput(
-      path="$.capacities",
-      detail="expected 1–32 named resources",
-    )
+    raise InvalidInput(path~, detail="expected 1–32 named resources")
   }
   let result : Array[Capacity] = []
   for key, units in fields {
-    let id = read_id(Json::string(key), "$.capacities")
+    let id = read_id(Json::string(key), path)
     result.push({
       resource: id,
-      units: read_integer(units, 0, max_units, "$.capacities." + id),
+      units: read_integer(units, 0, max_units, path + "." + id),
       overrides: [],
     })
   }

@@ -42,6 +42,7 @@ let usage =
   #|Usage: batchcontour review INPUT.json
   #|       batchcontour summarize INPUT.json
   #|       batchcontour gate INPUT.json POLICY.json
+  #|       batchcontour scenarios INPUT.json SCENARIOS.json
   #|       batchcontour archive-review INPUT.json
   #|       batchcontour verify-evidence INPUT.json ARCHIVE.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
@@ -133,6 +134,29 @@ async fn run(args : ArrayView[String]) -> Int32 {
         }
         @stdio.stdout.text.write(report.to_json().stringify() + "\n")
         0
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["scenarios", plan_path, scenario_path] =>
+      try {
+        let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+          error => raise FileError("\{plan_path}: \{error}")
+        }
+        let report = @capacity.compare_capacity_scenarios(
+          input,
+          read_input(scenario_path),
+        ) catch {
+          error => raise FileError("\{scenario_path}: \{error}")
+        }
+        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+        if report.has_regressions() {
+          2
+        } else {
+          0
+        }
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")

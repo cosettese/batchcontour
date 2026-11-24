@@ -110,6 +110,23 @@ fn stats_json(stats : OverloadStats) -> Json {
 }
 
 ///|
+fn resources_json(resources : ArrayView[ResourceSummary]) -> Json {
+  Json::array(
+    resources.map(summary => {
+      let row : Json = {
+        "resource": Json::string(summary.resource),
+        "baseline": stats_json(summary.baseline),
+        "candidate": stats_json(summary.candidate),
+        "regression_minutes": Json::number(
+          summary.regression_minutes.to_double(),
+        ),
+      }
+      row
+    }),
+  )
+}
+
+///|
 /// Aggregate JSON for CI logs. The verdict matches the detailed review.
 pub fn CapacityReport::summary_json(self : CapacityReport) -> Json {
   {
@@ -120,20 +137,6 @@ pub fn CapacityReport::summary_json(self : CapacityReport) -> Json {
     } else {
       "passed"
     },
-    "resources": Json::array(
-      self
-      .summaries()
-      .map(summary => {
-        let row : Json = {
-          "resource": Json::string(summary.resource),
-          "baseline": stats_json(summary.baseline),
-          "candidate": stats_json(summary.candidate),
-          "regression_minutes": Json::number(
-            summary.regression_minutes.to_double(),
-          ),
-        }
-        row
-      }),
-    ),
+    "resources": resources_json(self.summaries()[:]),
   }
 }

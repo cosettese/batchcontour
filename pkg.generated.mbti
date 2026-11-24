@@ -15,6 +15,8 @@ pub fn check_durations(ReviewInput, RunHistory) -> DurationReport raise ReviewEr
 
 pub fn compare_capacity(ReviewInput) -> CapacityReport raise ReviewError
 
+pub fn compare_capacity_scenarios(ReviewInput, String) -> ScenarioReport raise ReviewError
+
 pub fn verify_capacity_evidence(ReviewInput, String) -> CapacityReport raise ReviewError
 
 pub fn widen_duration_bounds(ReviewInput, RunHistory) -> ReviewInput raise ReviewError
@@ -125,6 +127,17 @@ pub fn ReviewInput::to_json(Self) -> @json.Json
 type RunHistory
 pub fn RunHistory::from_json(String) -> Self raise ReviewError
 pub fn RunHistory::to_json(Self) -> @json.Json
+
+type ScenarioReport
+pub fn ScenarioReport::has_regressions(Self) -> Bool
+pub fn ScenarioReport::results(Self) -> ArrayView[ScenarioResult]
+pub fn ScenarioReport::to_json(Self) -> @json.Json
+
+pub struct ScenarioResult {
+  id : String
+  regression_count : Int32
+  resources : ArrayView[ResourceSummary]
+}
 
 // Type aliases
 

@@ -87,7 +87,6 @@ fn review_resource(
 ) -> Unit raise ReviewError {
   let baseline = ActiveLoad::new()
   let candidate = ActiveLoad::new()
-  events.sort_by_key(event => event.minute)
   let mut index = 0
   let mut override_index = 0
   let mut cursor = window_start
@@ -156,12 +155,28 @@ fn review_resource(
 pub fn compare_capacity(
   input : ReviewInput,
 ) -> CapacityReport raise ReviewError {
+  compare_sorted_capacity(input, collect_events(input))
+}
+
+///|
+fn collect_events(input : ReviewInput) -> EventQueue raise ReviewError {
   let queue : EventQueue = {
     by_resource: Array::makei(input.capacities.length(), _ => []),
     event_count: 0,
   }
   expand_plan(queue, input.baseline, input.start, input.end, false)
   expand_plan(queue, input.candidate, input.start, input.end, true)
+  for events in queue.by_resource {
+    events.sort_by_key(event => event.minute)
+  }
+  queue
+}
+
+///|
+fn compare_sorted_capacity(
+  input : ReviewInput,
+  queue : EventQueue,
+) -> CapacityReport raise ReviewError {
   let result : ReportBuilder = {
     findings: [],
     contributors: 0,

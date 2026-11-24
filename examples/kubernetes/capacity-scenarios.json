@@ -1,0 +1,17 @@
+{
+  "schema": "batchcontour.capacity-scenarios.v1",
+  "scenarios": [
+    {
+      "id": "normal",
+      "capacities": { "worker-slots": 2 },
+      "capacity_overrides": []
+    },
+    {
+      "id": "maintenance",
+      "capacities": { "worker-slots": 2 },
+      "capacity_overrides": [
+        { "resource": "worker-slots", "start": "2026-11-23T02:02:00Z", "end": "2026-11-23T02:04:00Z", "units": 1 }
+      ]
+    }
+  ]
+}
