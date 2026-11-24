@@ -17,6 +17,8 @@ pub fn compare_capacity(ReviewInput) -> CapacityReport raise ReviewError
 
 pub fn compare_capacity_scenarios(ReviewInput, String) -> ScenarioReport raise ReviewError
 
+pub fn evaluate_launch_repairs(ReviewInput, String) -> RepairReport raise ReviewError
+
 pub fn verify_capacity_evidence(ReviewInput, String) -> CapacityReport raise ReviewError
 
 pub fn widen_duration_bounds(ReviewInput, RunHistory) -> ReviewInput raise ReviewError
@@ -111,6 +113,17 @@ pub struct OverloadStats {
   peak_maximum_excess : Int64
   minimum_excess_unit_minutes : Int64
   maximum_excess_unit_minutes : Int64
+}
+
+type RepairReport
+pub fn RepairReport::recommendation(Self) -> (String, ReviewInput)?
+pub fn RepairReport::results(Self) -> ArrayView[RepairResult]
+pub fn RepairReport::to_json(Self) -> @json.Json
+
+pub struct RepairResult {
+  id : String
+  launch_count : Int32
+  regression_count : Int32?
 }
 
 pub struct ResourceSummary {

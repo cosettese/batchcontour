@@ -172,6 +172,21 @@ async fn verify_cli(target : String) -> Array[String] {
     target,
   )
   let evidence = verify_evidence_cli(target)
+  let (repair, _) = invoke_cli(
+    target,
+    [
+      "repair", "examples/kubernetes/repair-input.json", "examples/kubernetes/repair-options.json",
+    ],
+    0,
+  )
+  let result = @json.parse(repair[:])
+  guard result is Object(data) &&
+    data.get("selected") == Some(Json::string("after-snapshot")) &&
+    data.get("options") is Some(Array([Object(keep), Object(drop), Object(_)])) &&
+    keep.get("verdict") == Some(Json::string("blocked")) &&
+    drop.get("verdict") == Some(Json::string("launch_count_changed")) else {
+    fail("incorrect repair recommendation on " + target)
+  }
   let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
   guard @json.parse(skip_maintenance[:]) is Object(fields) &&
     fields.get("findings") is Some(Array([])) else {
@@ -195,7 +210,7 @@ async fn verify_cli(target : String) -> Array[String] {
   }
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
-    proposal, evidence, scenarios, skip_maintenance,
+    proposal, evidence, scenarios, skip_maintenance, repair,
   ]
 }
 

@@ -1,4 +1,12 @@
 ///|
+fn Job::runs_at(self : Job, minute : Int64, moment : @moondate.Moment) -> Bool {
+  match self.launch_overrides.get(minute) {
+    Some(run) => run
+    None => self.cron.matches(moment)
+  }
+}
+
+///|
 fn read_launch_overrides(
   input : Json,
   earliest : Int64,

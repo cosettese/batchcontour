@@ -43,6 +43,7 @@ let usage =
   #|       batchcontour summarize INPUT.json
   #|       batchcontour gate INPUT.json POLICY.json
   #|       batchcontour scenarios INPUT.json SCENARIOS.json
+  #|       batchcontour repair INPUT.json OPTIONS.json
   #|       batchcontour archive-review INPUT.json
   #|       batchcontour verify-evidence INPUT.json ARCHIVE.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
@@ -156,6 +157,29 @@ async fn run(args : ArrayView[String]) -> Int32 {
           2
         } else {
           0
+        }
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["repair", plan_path, options_path] =>
+      try {
+        let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+          error => raise FileError("\{plan_path}: \{error}")
+        }
+        let report = @capacity.evaluate_launch_repairs(
+          input,
+          read_input(options_path),
+        ) catch {
+          error => raise FileError("\{options_path}: \{error}")
+        }
+        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+        if report.recommendation() is Some(_) {
+          0
+        } else {
+          2
         }
       } catch {
         error => {

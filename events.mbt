@@ -67,11 +67,7 @@ fn expand_plan(
       if possible_end <= start {
         continue
       }
-      let runs = match job.launch_overrides.get(minute) {
-        Some(run) => run
-        None => job.cron.matches(moment)
-      }
-      if !runs {
+      if !job.runs_at(minute, moment) {
         continue
       }
       let guaranteed_end = minute + job.min_minutes.to_int64()
