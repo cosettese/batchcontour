@@ -19,6 +19,8 @@ pub fn compare_capacity_scenarios(ReviewInput, String) -> ScenarioReport raise R
 
 pub fn evaluate_launch_repairs(ReviewInput, String) -> RepairReport raise ReviewError
 
+pub fn import_kubernetes_history(String, plan~ : String, namespace_name~ : String, min_samples? : Int32) -> RunHistory raise ReviewError
+
 pub fn replay_history(ReviewInput, RunHistory, String) -> ReplayReport raise ReviewError
 
 pub fn verify_capacity_evidence(ReviewInput, String) -> CapacityReport raise ReviewError

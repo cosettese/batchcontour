@@ -209,13 +209,16 @@ fn read_jobs(
 }
 
 ///|
-fn parse_document(text : String) -> Json raise ReviewError {
+fn parse_document(
+  text : String,
+  max_depth~ : Int32 = 8,
+) -> Json raise ReviewError {
   guard text.length() <= max_input_units else {
     raise LimitExceeded(path="$", detail="input exceeds 1 Mi UTF-16 code units")
   }
   @json.parse(
     text[:],
-    max_nesting_depth=8,
+    max_nesting_depth=max_depth,
     reject_duplicate_keys=true,
     preserve_number_repr=true,
   ) catch {

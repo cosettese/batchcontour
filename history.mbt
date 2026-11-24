@@ -45,22 +45,12 @@ fn read_observation(
   let run_id = read_id(fields["id"], path + ".id")
   let started_at = read_string(fields["started_at"], path + ".started_at")
   let finished_at = read_string(fields["finished_at"], path + ".finished_at")
-  let start = parse_utc_timestamp(
+  let (start, elapsed) = history_times(
     started_at,
-    path + ".started_at",
-    minute_aligned=false,
-  )
-  let end = parse_utc_timestamp(
     finished_at,
+    path + ".started_at",
     path + ".finished_at",
-    minute_aligned=false,
   )
-  guard start <= end else {
-    raise InvalidInput(
-      path=path + ".finished_at",
-      detail="finish precedes start",
-    )
-  }
   {
     plan,
     job_id,
@@ -68,9 +58,24 @@ fn read_observation(
     started_at,
     finished_at,
     start_second: start,
-    elapsed_seconds: end - start,
+    elapsed_seconds: elapsed,
     source_index: index,
   }
+}
+
+///|
+fn history_times(
+  started_at : String,
+  finished_at : String,
+  start_path : String,
+  end_path : String,
+) -> (Int64, Int64) raise ReviewError {
+  let start = parse_utc_timestamp(started_at, start_path, minute_aligned=false)
+  let end = parse_utc_timestamp(finished_at, end_path, minute_aligned=false)
+  guard start <= end else {
+    raise InvalidInput(path=end_path, detail="finish precedes start")
+  }
+  (start, end - start)
 }
 
 ///|
@@ -113,6 +118,14 @@ pub fn RunHistory::from_json(text : String) -> RunHistory raise ReviewError {
     seen[identity] = ()
     runs.push(run)
   }
+  normalized_history(min_samples, runs)
+}
+
+///|
+fn normalized_history(
+  min_samples : Int32,
+  runs : Array[Observation],
+) -> RunHistory {
   runs.sort_by((a, b) => {
     let side_order = a.plan[:].lexical_compare(b.plan[:])
     if side_order == 0 {

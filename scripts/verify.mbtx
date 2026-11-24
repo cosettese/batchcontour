@@ -188,6 +188,7 @@ async fn verify_cli(target : String) -> Array[String] {
     fail("incorrect repair recommendation on " + target)
   }
   let (replay_blocked, replay_passed) = verify_history_replay(target)
+  let imported = verify_kubernetes_import(target)
   let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
   guard @json.parse(skip_maintenance[:]) is Object(fields) &&
     fields.get("findings") is Some(Array([])) else {
@@ -212,7 +213,57 @@ async fn verify_cli(target : String) -> Array[String] {
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
     proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
+    imported,
   ]
+}
+
+///|
+async fn verify_kubernetes_import(target : String) -> String {
+  let (history, _) = invoke_cli(
+    target,
+    [
+      "import-kubernetes", "examples/kubernetes/completed-jobs.json", "candidate",
+      "batch-demo",
+    ],
+    0,
+  )
+  let (rejected, diagnostic) = invoke_cli(
+    target,
+    [
+      "import-kubernetes", "examples/kubernetes/completed-jobs.json", "candidate",
+      "wrong",
+    ],
+    1,
+  )
+  assert_eq(rejected, "")
+  assert_true(diagnostic.contains("$.items[0].metadata.namespace"))
+  let temp = @fs.tmpdir(prefix="batchcontour-jobs-")
+  defer @fs.rmdir(temp, recursive=true)
+  let path = temp + "/history.json"
+  @fs.write_file(path, history)
+  let (replay, _) = invoke_cli(
+    target,
+    [
+      "replay-history", "examples/kubernetes/maintenance.json", path, "candidate",
+    ],
+    2,
+  )
+  guard @json.parse(replay[:]) is Object(report) &&
+    report.get("overloads") is Some(Array([Object(overload)])) &&
+    overload.get("start") == Some(Json::string("2026-11-23T02:02:15Z")) &&
+    overload.get("end") == Some(Json::string("2026-11-23T02:02:45Z")) &&
+    overload.get("runs")
+    is Some(
+      Array(
+        [
+          String("5347d4f2-d38a-46b1-bb46-1a3fcbf470a0"),
+          String("6949c51c-d53f-4583-a3be-a74f12fdd70e"),
+        ],
+      ),
+    ) else {
+    fail("incorrect replay after Kubernetes import on " + target)
+  }
+  replay
 }
 
 ///|

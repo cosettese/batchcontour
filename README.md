@@ -55,9 +55,11 @@ moon run cmd/batchcontour --target wasm -- verify-durations examples/kubernetes/
 moon run cmd/batchcontour --target wasm -- replay-history examples/kubernetes/maintenance.json examples/kubernetes/replay-runs.json candidate
 ```
 
+Kubernetes 可以直接用已成功完成的 CronJob Job JSON 生成历史文件，再交给回放和时长核验。导入会报告不符合条件的记录。 [导入示例](docs/kubernetes-import.md)
+
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.11.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.12.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)

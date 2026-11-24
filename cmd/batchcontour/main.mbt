@@ -49,6 +49,7 @@ let usage =
   #|       batchcontour verify-durations INPUT.json HISTORY.json
   #|       batchcontour propose-durations INPUT.json HISTORY.json
   #|       batchcontour replay-history INPUT.json HISTORY.json baseline|candidate
+  #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE
 
 ///|
 async fn duration_command(
@@ -185,6 +186,21 @@ async fn run(args : ArrayView[String]) -> Int32 {
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["import-kubernetes", path, plan, namespace_name] =>
+      try {
+        let history = @capacity.import_kubernetes_history(
+          read_input(path),
+          plan~,
+          namespace_name~,
+        )
+        @stdio.stdout.text.write(history.to_json().stringify() + "\n")
+        0
+      } catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{path}: \{error}\n")
           1
         }
       }
