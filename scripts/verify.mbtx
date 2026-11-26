@@ -191,6 +191,7 @@ async fn verify_cli(target : String) -> Array[String] {
   let policy_repair = verify_policy_repair(target)
   let (replay_blocked, replay_passed) = verify_history_replay(target)
   let imported = verify_kubernetes_import(target)
+  let observed = verify_observed_kubernetes_jobs(target)
   let assembled = verify_review_documents(target, maintenance)
   let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
   guard @json.parse(skip_maintenance[:]) is Object(fields) &&
@@ -216,7 +217,7 @@ async fn verify_cli(target : String) -> Array[String] {
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
     proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
-    imported, assembled, gate_evidence, policy_repair,
+    imported, assembled, gate_evidence, policy_repair, observed,
   ]
 }
 
@@ -384,6 +385,73 @@ async fn verify_kubernetes_import(target : String) -> String {
       ),
     ) else {
     fail("incorrect replay after Kubernetes import on " + target)
+  }
+  replay
+}
+
+///|
+async fn verify_observed_kubernetes_jobs(target : String) -> String {
+  let source = "examples/kubernetes/observed-jobs.json"
+  let plan = "examples/kubernetes/observed-replay-plan.json"
+  let (history, _) = invoke_cli(
+    target,
+    [
+      "import-kubernetes", source, "candidate", "batchcontour-capture", "--min-samples",
+      "2",
+    ],
+    0,
+  )
+  let temp = @fs.tmpdir(prefix="batchcontour-observed-jobs-")
+  defer @fs.rmdir(temp, recursive=true)
+  let path = temp + "/history.json"
+  @fs.write_file(path, history)
+  let (replay, _) = invoke_cli(
+    target,
+    ["replay-history", plan, path, "candidate"],
+    2,
+  )
+  guard @json.parse(replay[:]) is Object(report) &&
+    report.get("coverage") is Some(Array([Object(coverage)])) &&
+    coverage.get("job") == Some(Json::string("hello")) &&
+    coverage.get("sample_count") == Some(Json::number(2.0)) &&
+    coverage.get("insufficient_samples") == Some(Json::boolean(false)) &&
+    report.get("overloads") is Some(Array([Object(overload)])) &&
+    overload.get("start") == Some(Json::string("2026-11-26T07:37:00Z")) &&
+    overload.get("end") == Some(Json::string("2026-11-26T07:37:25Z")) &&
+    overload.get("capacity") == Some(Json::number(1.0)) &&
+    overload.get("occupied_units") == Some(Json::number(2.0)) &&
+    overload.get("runs")
+    is Some(
+      Array(
+        [
+          String("39fbfb27-793a-4692-aea6-9bd2978d1402"),
+          String("a3cda458-a603-418a-9ca1-313a32a44749"),
+        ],
+      ),
+    ) else {
+    fail("incorrect replay of the captured Kubernetes Jobs on " + target)
+  }
+  let (higher_threshold, _) = invoke_cli(
+    target,
+    [
+      "import-kubernetes", source, "candidate", "batchcontour-capture", "--min-samples",
+      "3",
+    ],
+    0,
+  )
+  let stricter_path = temp + "/stricter-history.json"
+  @fs.write_file(stricter_path, higher_threshold)
+  let (insufficient, _) = invoke_cli(
+    target,
+    ["replay-history", plan, stricter_path, "candidate"],
+    2,
+  )
+  guard @json.parse(insufficient[:]) is Object(report) &&
+    report.get("coverage") is Some(Array([Object(coverage)])) &&
+    coverage.get("insufficient_samples") == Some(Json::boolean(true)) else {
+    fail(
+      "expected two observed runs to fall short of the three-sample threshold",
+    )
   }
   replay
 }

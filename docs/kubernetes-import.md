@@ -22,3 +22,18 @@ The [capture workflow](../.github/workflows/kubernetes-capture.yml) starts a
 disposable kind cluster and runs the [capture CronJob](../examples/kubernetes/capture-cronjob.yaml).
 It waits for at least two successful Jobs, validates the export with the CLI,
 and stores the original JSON as the `completed-kubernetes-jobs` artifact.
+
+The [checked-in export](../examples/kubernetes/observed-jobs.json) comes from
+two controller-created Jobs in that cluster. The controller recorded the
+first run from 07:36:00Z to 07:37:25Z and the second from 07:37:00Z to 07:38:23Z
+on November 26, 2026. [Capture run](https://github.com/cosettese/batchcontour/actions/runs/45776363623)
+
+```sh
+moon run cmd/batchcontour --target wasm -- import-kubernetes examples/kubernetes/observed-jobs.json candidate batchcontour-capture --min-samples 2 > observed-history.json
+moon run cmd/batchcontour --target wasm -- replay-history examples/kubernetes/observed-replay-plan.json observed-history.json candidate
+```
+
+The replay plan assigns one modeled worker slot per run and a budget of one
+slot. The CLI exits 2 and shows a 25-second overlap with both Job UIDs.
+Both runs satisfy the sample threshold of two. Repeat with
+`--min-samples 3` to see insufficient coverage alongside the overload.

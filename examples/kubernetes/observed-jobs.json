@@ -1,0 +1,209 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "annotations": {
+                    "batch.kubernetes.io/cronjob-scheduled-timestamp": "2026-11-26T07:36:00Z"
+                },
+                "creationTimestamp": "2026-11-26T07:36:00Z",
+                "generation": 1,
+                "labels": {
+                    "batch-review": "hello"
+                },
+                "name": "hello-29927976",
+                "namespace": "batchcontour-capture",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "batch/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "CronJob",
+                        "name": "hello",
+                        "uid": "28eab852-7565-4c15-a3d4-3a5e8ed8d124"
+                    }
+                ],
+                "resourceVersion": "695",
+                "uid": "a3cda458-a603-418a-9ca1-313a32a44749"
+            },
+            "spec": {
+                "backoffLimit": 0,
+                "completionMode": "NonIndexed",
+                "completions": 1,
+                "manualSelector": false,
+                "parallelism": 1,
+                "podReplacementPolicy": "TerminatingOrFailed",
+                "selector": {
+                    "matchLabels": {
+                        "batch.kubernetes.io/controller-uid": "a3cda458-a603-418a-9ca1-313a32a44749"
+                    }
+                },
+                "suspend": false,
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "batch.kubernetes.io/controller-uid": "a3cda458-a603-418a-9ca1-313a32a44749",
+                            "batch.kubernetes.io/job-name": "hello-29927976",
+                            "controller-uid": "a3cda458-a603-418a-9ca1-313a32a44749",
+                            "job-name": "hello-29927976"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "date -u \u0026\u0026 sleep 80"
+                                ],
+                                "image": "busybox:1.37.0",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "hello",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Never",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "completionTime": "2026-11-26T07:37:25Z",
+                "conditions": [
+                    {
+                        "lastProbeTime": "2026-11-26T07:37:25Z",
+                        "lastTransitionTime": "2026-11-26T07:37:25Z",
+                        "message": "Reached expected number of succeeded pods",
+                        "reason": "CompletionsReached",
+                        "status": "True",
+                        "type": "SuccessCriteriaMet"
+                    },
+                    {
+                        "lastProbeTime": "2026-11-26T07:37:25Z",
+                        "lastTransitionTime": "2026-11-26T07:37:25Z",
+                        "message": "Reached expected number of succeeded pods",
+                        "reason": "CompletionsReached",
+                        "status": "True",
+                        "type": "Complete"
+                    }
+                ],
+                "ready": 0,
+                "startTime": "2026-11-26T07:36:00Z",
+                "succeeded": 1,
+                "terminating": 0,
+                "uncountedTerminatedPods": {}
+            }
+        },
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "annotations": {
+                    "batch.kubernetes.io/cronjob-scheduled-timestamp": "2026-11-26T07:37:00Z"
+                },
+                "creationTimestamp": "2026-11-26T07:37:00Z",
+                "generation": 1,
+                "labels": {
+                    "batch-review": "hello"
+                },
+                "name": "hello-29927977",
+                "namespace": "batchcontour-capture",
+                "ownerReferences": [
+                    {
+                        "apiVersion": "batch/v1",
+                        "blockOwnerDeletion": true,
+                        "controller": true,
+                        "kind": "CronJob",
+                        "name": "hello",
+                        "uid": "28eab852-7565-4c15-a3d4-3a5e8ed8d124"
+                    }
+                ],
+                "resourceVersion": "799",
+                "uid": "39fbfb27-793a-4692-aea6-9bd2978d1402"
+            },
+            "spec": {
+                "backoffLimit": 0,
+                "completionMode": "NonIndexed",
+                "completions": 1,
+                "manualSelector": false,
+                "parallelism": 1,
+                "podReplacementPolicy": "TerminatingOrFailed",
+                "selector": {
+                    "matchLabels": {
+                        "batch.kubernetes.io/controller-uid": "39fbfb27-793a-4692-aea6-9bd2978d1402"
+                    }
+                },
+                "suspend": false,
+                "template": {
+                    "metadata": {
+                        "labels": {
+                            "batch.kubernetes.io/controller-uid": "39fbfb27-793a-4692-aea6-9bd2978d1402",
+                            "batch.kubernetes.io/job-name": "hello-29927977",
+                            "controller-uid": "39fbfb27-793a-4692-aea6-9bd2978d1402",
+                            "job-name": "hello-29927977"
+                        }
+                    },
+                    "spec": {
+                        "containers": [
+                            {
+                                "command": [
+                                    "sh",
+                                    "-c",
+                                    "date -u \u0026\u0026 sleep 80"
+                                ],
+                                "image": "busybox:1.37.0",
+                                "imagePullPolicy": "IfNotPresent",
+                                "name": "hello",
+                                "resources": {},
+                                "terminationMessagePath": "/dev/termination-log",
+                                "terminationMessagePolicy": "File"
+                            }
+                        ],
+                        "dnsPolicy": "ClusterFirst",
+                        "restartPolicy": "Never",
+                        "schedulerName": "default-scheduler",
+                        "securityContext": {},
+                        "terminationGracePeriodSeconds": 30
+                    }
+                }
+            },
+            "status": {
+                "completionTime": "2026-11-26T07:38:23Z",
+                "conditions": [
+                    {
+                        "lastProbeTime": "2026-11-26T07:38:23Z",
+                        "lastTransitionTime": "2026-11-26T07:38:23Z",
+                        "message": "Reached expected number of succeeded pods",
+                        "reason": "CompletionsReached",
+                        "status": "True",
+                        "type": "SuccessCriteriaMet"
+                    },
+                    {
+                        "lastProbeTime": "2026-11-26T07:38:23Z",
+                        "lastTransitionTime": "2026-11-26T07:38:23Z",
+                        "message": "Reached expected number of succeeded pods",
+                        "reason": "CompletionsReached",
+                        "status": "True",
+                        "type": "Complete"
+                    }
+                ],
+                "ready": 0,
+                "startTime": "2026-11-26T07:37:00Z",
+                "succeeded": 1,
+                "terminating": 0,
+                "uncountedTerminatedPods": {}
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
+    }
+}

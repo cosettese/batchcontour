@@ -1,0 +1,9 @@
+{
+  "schema": "batchcontour.input.v1",
+  "window": { "start": "2026-11-26T07:36:00Z", "end": "2026-11-26T07:39:00Z" },
+  "capacities": { "worker-slots": 1 },
+  "baseline": [],
+  "candidate": [
+    { "id": "hello", "cron": "* * * * *", "min_minutes": 1, "max_minutes": 2, "demand": { "worker-slots": 1 } }
+  ]
+}

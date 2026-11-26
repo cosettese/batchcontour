@@ -36,3 +36,8 @@ passes change review and fails the configured overload ceiling.
 The [history replay example](../../docs/history-replay.md) uses synthetic
 completed-run timestamps. The two candidate runs hold both slots for 30 seconds
 inside the maintenance period when only one slot is available.
+
+`observed-jobs.json` contains two actual Job records from the disposable
+capture cluster. Replay them with `observed-replay-plan.json` to reproduce
+the 25-second overlap. The one-slot capacity is a model input.
+[Import and replay commands](../../docs/kubernetes-import.md#capture-a-live-fixture)
