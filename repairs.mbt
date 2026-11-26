@@ -23,6 +23,8 @@ struct RepairReport {
   required_launches : Int32
   results : Array[RepairResult]
   recommendation : (String, ReviewInput)?
+  policy : CapacityPolicy?
+  violations : Map[String, Array[CapacityViolation]]
 }
 
 ///|
@@ -35,6 +37,16 @@ pub fn RepairReport::recommendation(
 ///|
 pub fn RepairReport::results(self : RepairReport) -> ArrayView[RepairResult] {
   self.results[:]
+}
+
+///|
+/// Return the absolute violations for a policy-checked option.
+/// An empty view means the option met the ceilings.
+pub fn RepairReport::policy_violations(
+  self : RepairReport,
+  option_id : String,
+) -> ArrayView[CapacityViolation]? {
+  self.violations.get(option_id).map(entries => entries[:])
 }
 
 ///|
@@ -80,6 +92,26 @@ pub fn evaluate_launch_repairs(
   input : ReviewInput,
   text : String,
 ) -> RepairReport raise ReviewError {
+  evaluate_repairs(input, text, None)
+}
+
+///|
+/// Recommend the first option preserving launches that passes the same policy as `gate`.
+pub fn evaluate_launch_repairs_with_policy(
+  input : ReviewInput,
+  text : String,
+  policy : CapacityPolicy,
+) -> RepairReport raise ReviewError {
+  validate_policy_resources(input, policy)
+  evaluate_repairs(input, text, Some(policy))
+}
+
+///|
+fn evaluate_repairs(
+  input : ReviewInput,
+  text : String,
+  policy : CapacityPolicy?,
+) -> RepairReport raise ReviewError {
   let root = read_object(
     parse_document(text),
     ["schema", "job", "options"],
@@ -105,6 +137,7 @@ pub fn evaluate_launch_repairs(
     )
   }
   let results : Array[RepairResult] = []
+  let violations : Map[String, Array[CapacityViolation]] = Map([])
   let mut recommendation : (String, ReviewInput)? = None
   for option in options {
     let modified = {
@@ -131,21 +164,30 @@ pub fn evaluate_launch_repairs(
       launch_count,
       regression_count: Some(report.regression_count),
     })
-    if recommendation is None && !report.has_regressions() {
+    let blocked = match policy {
+      Some(policy) => {
+        let gate = apply_capacity_policy(report, policy)
+        violations[option.id] = gate.violations
+        gate.has_failures()
+      }
+      None => report.has_regressions()
+    }
+    if recommendation is None && !blocked {
       recommendation = Some((option.id, proposal))
     }
   }
-  { job_id, required_launches, results, recommendation, }
+  { job_id, required_launches, results, recommendation, policy, violations, }
 }
 
 ///|
 pub fn RepairReport::to_json(self : RepairReport) -> Json {
   let options = self.results.map(option => {
+    let violations = self.violations.get(option.id)
     let (verdict, regressions) = match option.regression_count {
       None => ("launch_count_changed", Json::null())
       Some(count) =>
         (
-          if count > 0 {
+          if count > 0 || (violations is Some(entries) && !entries.is_empty()) {
             "blocked"
           } else {
             "passed"
@@ -153,19 +195,25 @@ pub fn RepairReport::to_json(self : RepairReport) -> Json {
           Json::number(count.to_double()),
         )
     }
-    let entry : Json = {
+    let entry : Map[String, Json] = {
       "id": Json::string(option.id),
       "launch_count": Json::number(option.launch_count.to_double()),
       "verdict": Json::string(verdict),
       "regression_count": regressions,
     }
-    entry
+    if self.policy is Some(_) {
+      entry["policy_violations"] = match violations {
+        Some(entries) => Json::array(entries.map(CapacityViolation::to_json))
+        None => Json::null()
+      }
+    }
+    Json::object(entry)
   })
   let (selected, proposal) = match self.recommendation {
     Some((id, review)) => (Json::string(id), review.to_json())
     None => (Json::null(), Json::null())
   }
-  {
+  let document : Map[String, Json] = {
     "schema": "batchcontour.launch-repair-report.v1",
     "job": Json::string(self.job_id),
     "required_launches": Json::number(self.required_launches.to_double()),
@@ -173,4 +221,9 @@ pub fn RepairReport::to_json(self : RepairReport) -> Json {
     "selected": selected,
     "proposal": proposal,
   }
+  if self.policy is Some(policy) {
+    document["schema"] = Json::string("batchcontour.launch-repair-report.v2")
+    document["policy"] = policy.to_json()
+  }
+  Json::object(document)
 }

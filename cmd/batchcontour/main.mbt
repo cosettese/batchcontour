@@ -45,7 +45,7 @@ let usage =
   #|       batchcontour archive-gate INPUT.json POLICY.json
   #|       batchcontour verify-gate-evidence INPUT.json POLICY.json ARCHIVE.json
   #|       batchcontour scenarios INPUT.json SCENARIOS.json
-  #|       batchcontour repair INPUT.json OPTIONS.json
+  #|       batchcontour repair INPUT.json OPTIONS.json [POLICY.json]
   #|       batchcontour archive-review INPUT.json
   #|       batchcontour verify-evidence INPUT.json ARCHIVE.json
   #|       batchcontour verify-durations INPUT.json HISTORY.json
@@ -123,6 +123,50 @@ async fn gate_command(
 }
 
 ///|
+async fn repair_command(
+  plan_path : String,
+  options_path : String,
+  policy_path? : String,
+) -> Int32 {
+  let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
+    error => raise FileError("\{plan_path}: \{error}")
+  }
+  let options = read_input(options_path) catch {
+    error => raise FileError("\{options_path}: \{error}")
+  }
+  let policy = match policy_path {
+    Some(path) => {
+      let policy = @capacity.CapacityPolicy::from_json(read_input(path)) catch {
+        error => raise FileError("\{path}: \{error}")
+      }
+      Some(policy)
+    }
+    None => None
+  }
+  let report = try {
+    match policy {
+      Some(policy) =>
+        @capacity.evaluate_launch_repairs_with_policy(input, options, policy)
+      None => @capacity.evaluate_launch_repairs(input, options)
+    }
+  } catch {
+    error => {
+      let paths = match policy_path {
+        Some(path) => options_path + ", " + path
+        None => options_path
+      }
+      raise FileError("\{paths}: \{error}")
+    }
+  }
+  @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+  if report.recommendation() is Some(_) {
+    0
+  } else {
+    2
+  }
+}
+
+///|
 async fn run(args : ArrayView[String]) -> Int32 {
   match args {
     ["--help"] => {
@@ -193,29 +237,22 @@ async fn run(args : ArrayView[String]) -> Int32 {
           1
         }
       }
-    ["repair", plan_path, options_path] =>
-      try {
-        let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
-          error => raise FileError("\{plan_path}: \{error}")
+    ["repair", plan_path, options_path, .. extra] => {
+      let policy_path = match extra {
+        [] => None
+        [path] => Some(path)
+        _ => {
+          @stdio.stderr.text.write(usage + "\n")
+          return 1
         }
-        let report = @capacity.evaluate_launch_repairs(
-          input,
-          read_input(options_path),
-        ) catch {
-          error => raise FileError("\{options_path}: \{error}")
-        }
-        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
-        if report.recommendation() is Some(_) {
-          0
-        } else {
-          2
-        }
-      } catch {
+      }
+      repair_command(plan_path, options_path, policy_path?) catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")
           1
         }
       }
+    }
     ["assemble", budget, baseline, candidate] =>
       try {
         let budget_text = read_input(budget) catch {

@@ -89,7 +89,14 @@ pub fn check_capacity_policy(
   policy : CapacityPolicy,
 ) -> CapacityGate raise ReviewError {
   validate_policy_resources(input, policy)
-  let review = compare_capacity(input)
+  apply_capacity_policy(compare_capacity(input), policy)
+}
+
+///|
+fn apply_capacity_policy(
+  review : CapacityReport,
+  policy : CapacityPolicy,
+) -> CapacityGate {
   { review, violations: capacity_violations(review, policy), }
 }
 

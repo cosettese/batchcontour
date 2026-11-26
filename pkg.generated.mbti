@@ -23,6 +23,8 @@ pub fn compare_capacity_scenarios(ReviewInput, String) -> ScenarioReport raise R
 
 pub fn evaluate_launch_repairs(ReviewInput, String) -> RepairReport raise ReviewError
 
+pub fn evaluate_launch_repairs_with_policy(ReviewInput, String, CapacityPolicy) -> RepairReport raise ReviewError
+
 pub fn import_kubernetes_history(String, plan~ : String, namespace_name~ : String, min_samples? : Int32) -> RunHistory raise ReviewError
 
 pub fn replay_history(ReviewInput, RunHistory, String) -> ReplayReport raise ReviewError
@@ -127,6 +129,7 @@ pub struct OverloadStats {
 }
 
 type RepairReport
+pub fn RepairReport::policy_violations(Self, String) -> ArrayView[CapacityViolation]?
 pub fn RepairReport::recommendation(Self) -> (String, ReviewInput)?
 pub fn RepairReport::results(Self) -> ArrayView[RepairResult]
 pub fn RepairReport::to_json(Self) -> @json.Json

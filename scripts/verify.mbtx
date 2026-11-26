@@ -188,6 +188,7 @@ async fn verify_cli(target : String) -> Array[String] {
     drop.get("verdict") == Some(Json::string("launch_count_changed")) else {
     fail("incorrect repair recommendation on " + target)
   }
+  let policy_repair = verify_policy_repair(target)
   let (replay_blocked, replay_passed) = verify_history_replay(target)
   let imported = verify_kubernetes_import(target)
   let assembled = verify_review_documents(target, maintenance)
@@ -215,8 +216,39 @@ async fn verify_cli(target : String) -> Array[String] {
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
     proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
-    imported, assembled, gate_evidence,
+    imported, assembled, gate_evidence, policy_repair,
   ]
+}
+
+///|
+async fn verify_policy_repair(target : String) -> String {
+  let plan = "examples/kubernetes/repair-existing-overload.json"
+  let options = "examples/kubernetes/repair-options.json"
+  let policy = "examples/kubernetes/strict-policy.json"
+  let (output, _) = invoke_cli(target, ["repair", plan, options, policy], 0)
+  guard @json.parse(output[:]) is Object(data) &&
+    data.get("schema") ==
+    Some(Json::string("batchcontour.launch-repair-report.v2")) &&
+    data.get("selected") == Some(Json::string("after-snapshot")) &&
+    data.get("options")
+    is Some(Array([Object(keep), Object(drop), Object(repaired)])) &&
+    keep.get("verdict") == Some(Json::string("blocked")) &&
+    keep.get("regression_count") == Some(Json::number(0.0)) &&
+    keep.get("policy_violations") is Some(Array([Object(ceiling)])) &&
+    ceiling.get("metric") == Some(Json::string("possible_minutes")) &&
+    ceiling.get("limit") == Some(Json::number(1.0)) &&
+    ceiling.get("actual") == Some(Json::number(2.0)) &&
+    drop.get("policy_violations") == Some(Json::null()) &&
+    repaired.get("policy_violations") is Some(Array([])) &&
+    data.get("proposal") is Some(proposal) else {
+    fail("incorrect policy-aware recommendation on " + target)
+  }
+  let temp = @fs.tmpdir(prefix="batchcontour-policy-repair-")
+  defer @fs.rmdir(temp, recursive=true)
+  let approved = temp + "/proposal.json"
+  @fs.write_file(approved, proposal.stringify())
+  ignore(invoke_cli(target, ["gate", approved, policy], 0))
+  output
 }
 
 ///|

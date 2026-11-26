@@ -74,3 +74,51 @@ test "invalid options fail before yielding recommendations" {
     is Some(_),
   )
 }
+
+///|
+test "repair uses gate ceilings to eliminate a non-regressing option" {
+  let backup = job("backup", "0 0 * * *", 2, 2)
+  let etl = job("etl", "0 0 * * *", 2, 2)
+  let jobs = "[\{backup},\{etl}]"
+  let input = @batchcontour.ReviewInput::from_json(sample_input(jobs, jobs))
+  let policy = capacity_policy("{\"db\":{\"possible_minutes\":1}}")
+  let options = repair_options(
+    "[{\"id\":\"keep\",\"cron\":\"0 0 * * *\"},{\"id\":\"drop\",\"cron\":\"11 0 * * *\"},{\"id\":\"move\",\"cron\":\"2 0 * * *\"}]",
+  )
+  let legacy = @batchcontour.evaluate_launch_repairs(input, options)
+  guard legacy.recommendation() is Some(("keep", _)) else {
+    fail("expected regression-only mode to keep the schedule")
+  }
+  assert_true(legacy.policy_violations("keep") is None)
+  let report = @batchcontour.evaluate_launch_repairs_with_policy(
+    input, options, policy,
+  )
+  assert_eq(report.results()[0].regression_count, Some(0))
+  guard report.policy_violations("keep") is Some([violation]) else {
+    fail("expected the same ceiling violation as the gate")
+  }
+  let from_gate = @batchcontour.check_capacity_policy(input, policy).violations()[0]
+  assert_eq(
+    (violation.resource, violation.metric, violation.limit, violation.actual),
+    (from_gate.resource, from_gate.metric, from_gate.limit, from_gate.actual),
+  )
+  assert_true(report.policy_violations("drop") is None)
+  assert_true(report.policy_violations("move") is Some([]))
+  guard report.recommendation() is Some(("move", proposal)) else {
+    fail("expected the first policy-compliant schedule")
+  }
+  assert_false(
+    @batchcontour.check_capacity_policy(proposal, policy).has_failures(),
+  )
+  let only_keep = repair_options("[{\"id\":\"keep\",\"cron\":\"0 0 * * *\"}]")
+  assert_true(
+    @batchcontour.evaluate_launch_repairs_with_policy(input, only_keep, policy).recommendation()
+    is None,
+  )
+  assert_eq(
+    @batchcontour.evaluate_launch_repairs_with_policy(input, options, policy)
+    .to_json()
+    .stringify(),
+    report.to_json().stringify(),
+  )
+}

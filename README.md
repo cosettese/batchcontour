@@ -63,7 +63,7 @@ GitHub PR 可以直接启用容量门禁。它从基线提交读取预算，从�
 
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.15.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.16.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)
@@ -81,7 +81,7 @@ let report_text = report.to_json().stringify()
 
 一次性补跑和停跑可以写入 v3 的 `launch_overrides`。维护示例保留原 cron，只跳过有冲突的两次启动，审查结果从阻断变为通过。 [停跑示例](examples/kubernetes/skip-maintenance.json)
 
-已有几个可接受的 cron 备选时，`repair` 会保留观察窗内的实际启动次数，推荐第一个通过容量回归检查的选项，并生成可复核的完整排程提案。 [排程方案筛选](docs/repair.md)
+已有几个可接受的 cron 备选时，`repair` 会保留观察窗内的实际启动次数，并推荐第一个通过检查的选项。传入门禁使用的策略文件后，筛选也会检查同一套绝对容量上限。 [排程方案筛选](docs/repair.md)
 
 ## 验证
 
