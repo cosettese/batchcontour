@@ -30,7 +30,7 @@ async fn read_input(path : String, archive~ : Bool = false) -> String {
     guard chunk.length() <= max_bytes - buffer.length() else {
       raise FileError(size_error)
     }
-    buffer.write_bytes(chunk)
+    buffer.write_bytesview(chunk)
   }
   @utf8.decode(buffer.to_bytes()) catch {
     _ => raise FileError("input is not valid UTF-8")

@@ -6,7 +6,7 @@
 
 ## 运行公开示例
 
-安装当前稳定版 MoonBit 后，从仓库根目录运行。开发验证使用 `moonc v0.10.22+124d61d05`。
+安装当前稳定版 MoonBit 后，从仓库根目录运行。开发验证使用 `moonc v1.0.0-rc1+3c0520448`。
 
 ```sh
 moon run cmd/batchcontour --target wasm -- review examples/kubernetes/blocked.json
@@ -63,7 +63,7 @@ GitHub PR 可以直接启用容量门禁。它从基线提交读取预算，从�
 
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.18.1`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.18.2`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)

@@ -36,11 +36,11 @@ shows the dependency and import declarations.
 Download the `batchcontour-source-bundle` artifact from the completed bundle
 workflow for the revision you want to evaluate. [Bundle workflow runs](https://github.com/cosettese/batchcontour/actions/workflows/release-bundle.yml)
 The artifact contains
-`batchcontour-v0.18.1-source.zip` and `SHA256SUMS` for version 0.18.1.
+`batchcontour-v0.18.2-source.zip` and `SHA256SUMS` for version 0.18.2.
 
 Place the two files in an empty directory. On Linux, verify the ZIP with
 `sha256sum -c SHA256SUMS`. On macOS use `shasum -a 256 -c SHA256SUMS`.
-On Windows compare `Get-FileHash .\batchcontour-v0.18.1-source.zip -Algorithm SHA256`
+On Windows compare `Get-FileHash .\batchcontour-v0.18.2-source.zip -Algorithm SHA256`
 with the value in `SHA256SUMS`.
 
 Extract the ZIP into a new directory and run the acceptance command there.

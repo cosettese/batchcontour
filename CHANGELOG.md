@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.2
+
+- Use the current byte-view API when reading CLI input files with MoonBit 1.0 RC1.
+
 ## 0.18.1
 
 - Keep the JSON input and evidence nesting limits with the current MoonBit stable API.
