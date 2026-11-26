@@ -44,3 +44,21 @@ Libraries can load `CapacityPolicy::from_json`, preserve it with
 `CapacityPolicy::to_json`, then call `check_capacity_policy(input, policy)`
 and inspect the typed `CapacityGate` or encode it as JSON. Policy and review
 resources must refer to the same named budget.
+
+## Reproduce a gate decision
+
+```sh
+moon run cmd/batchcontour --target wasm -- archive-gate examples/kubernetes/maintenance.json examples/kubernetes/lenient-policy.json > gate-evidence.json
+moon run cmd/batchcontour --target wasm -- verify-gate-evidence examples/kubernetes/maintenance.json examples/kubernetes/lenient-policy.json gate-evidence.json
+```
+
+This example blocks on two regression intervals. Both absolute ceilings pass.
+The archive includes the normalized input and policy, the gate summary, and
+the full report with capacity, bounds on the shortfall, and contributing runs.
+The verifier takes the original trusted input and policy, reruns the gate, and
+rejects differences with a field path. Both archive commands exit 0 on
+successful archival or verification, including when the recorded gate verdict
+is blocked. The `gate` command exposes the decision via its exit code.
+
+MoonBit callers can read the full report with `CapacityGate::report()`,
+or use `archive_capacity_gate` and `verify_gate_evidence`.

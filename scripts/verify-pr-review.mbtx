@@ -72,9 +72,19 @@ async fn verify_action_reports(passed : String, blocked : String) -> Unit {
   }
   guard @json.parse(@fs.read_file(blocked).text()[:]) is Object(report) &&
     report.get("verdict") == Some(Json::string("blocked")) &&
-    report.get("report") is Some(Object(findings)) &&
-    findings.get("regression_count") == Some(Json::number(2.0)) else {
-    fail("expected two regression intervals from the composite action")
+    report.get("report") is Some(Object(gate)) &&
+    gate.get("violations") is Some(Array([])) &&
+    report.get("gate_evidence") is Some(Object(evidence)) &&
+    evidence.get("report") is Some(Object(findings)) &&
+    findings.get("regression_count") == Some(Json::number(2.0)) &&
+    findings.get("findings") is Some(Array([Object(first), Object(_)])) &&
+    first.get("candidate") is Some(Object(load)) &&
+    load.get("maximum_excess") == Some(Json::number(1.0)) &&
+    load.get("contributors") is Some(Array([Object(run), ..])) &&
+    run.get("job") == Some(Json::string("hello")) else {
+    fail(
+      "expected two regression intervals with contributing runs and no policy violations",
+    )
   }
 }
 
@@ -120,6 +130,8 @@ async fn main {
     result.get("candidate_commit") == Some(Json::string(candidate)) &&
     result.get("verdict") == Some(Json::string("blocked")) &&
     result.get("report") is Some(Object(report)) &&
+    result.get("gate_evidence") is Some(Object(evidence)) &&
+    evidence.get("gate") == Some(Json::object(report)) &&
     report.get("violations") is Some(Array([Object(violation)])) &&
     violation.get("metric") == Some(Json::string("possible_minutes")) else {
     fail(

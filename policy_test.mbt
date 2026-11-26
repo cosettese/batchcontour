@@ -51,6 +51,45 @@ test "ceilings cannot suppress a regression and safe resources have zero metrics
   assert_true(gate.regression_blocked())
   assert_true(gate.has_failures())
   assert_eq(gate.violations().length(), 0)
+  let interval = gate.report().findings()[0]
+  assert_eq((interval.from_minute, interval.until_minute), (0L, 1L))
+  assert_eq(interval.candidate.maximum_excess, 2L)
+  assert_eq(interval.candidate.contributors[0].job_id, "sync")
+  let archive = @batchcontour.archive_capacity_gate(plan, policy).stringify()
+  let offline = @batchcontour.verify_gate_evidence(plan, policy, archive)
+  assert_eq(
+    offline.report().to_json().stringify(),
+    gate.report().to_json().stringify(),
+  )
+  assert_eq(offline.to_json().stringify(), gate.to_json().stringify())
+  let stricter = capacity_policy(
+    "{\"db\":{\"possible_minutes\":0},\"gpu\":{\"possible_minutes\":0}}",
+  )
+  let wrong_policy = try {
+    ignore(@batchcontour.verify_gate_evidence(plan, stricter, archive))
+    false
+  } catch {
+    @batchcontour.InvalidInput(path~, ..) => path.has_prefix("$.policy.")
+    error => raise error
+  }
+  assert_true(wrong_policy)
+  let tampered = archive.replace(
+    old="\"job\":\"sync\"",
+    new="\"job\":\"other\"",
+  )
+  let wrong_report = try {
+    ignore(@batchcontour.verify_gate_evidence(plan, policy, tampered))
+    false
+  } catch {
+    @batchcontour.InvalidInput(path~, ..) =>
+      path.has_prefix("$.report.findings") &&
+      path.has_suffix(".contributors[0].job")
+    error => raise error
+  }
+  assert_true(wrong_report)
+  assert_true(
+    @batchcontour.verify_gate_evidence(plan, policy, archive).has_failures(),
+  )
 }
 
 ///|

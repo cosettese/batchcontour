@@ -10,13 +10,19 @@ pub struct CapacityViolation {
 ///|
 /// Separate results for the existing regression gate and the policy ceilings.
 struct CapacityGate {
-  regression_blocked : Bool
+  review : CapacityReport
   violations : Array[CapacityViolation]
 }
 
 ///|
 pub fn CapacityGate::regression_blocked(self : CapacityGate) -> Bool {
-  self.regression_blocked
+  self.review.has_regressions()
+}
+
+///|
+/// Read the intervals and contributing runs from the same sweep as the gate.
+pub fn CapacityGate::report(self : CapacityGate) -> CapacityReport {
+  self.review
 }
 
 ///|
@@ -28,16 +34,14 @@ pub fn CapacityGate::violations(
 
 ///|
 pub fn CapacityGate::has_failures(self : CapacityGate) -> Bool {
-  self.regression_blocked || !self.violations.is_empty()
+  self.regression_blocked() || !self.violations.is_empty()
 }
 
 ///|
-/// Run the capacity review and apply absolute limits to the candidate.
-/// A compliant absolute policy cannot override a regression.
-pub fn check_capacity_policy(
+fn validate_policy_resources(
   input : ReviewInput,
   policy : CapacityPolicy,
-) -> CapacityGate raise ReviewError {
+) -> Unit raise ReviewError {
   for rule in policy.resources {
     guard input.capacities.any(capacity => capacity.resource == rule.resource) else {
       raise InvalidInput(
@@ -46,7 +50,13 @@ pub fn check_capacity_policy(
       )
     }
   }
-  let report = compare_capacity(input)
+}
+
+///|
+fn capacity_violations(
+  report : CapacityReport,
+  policy : CapacityPolicy,
+) -> Array[CapacityViolation] {
   let summaries = report.summaries()
   let violations : Array[CapacityViolation] = []
   for rule in policy.resources {
@@ -68,26 +78,39 @@ pub fn check_capacity_policy(
       }
     }
   }
-  { regression_blocked: report.has_regressions(), violations, }
+  violations
+}
+
+///|
+/// Run the capacity review and apply absolute limits to the candidate.
+/// A compliant absolute policy cannot override a regression.
+pub fn check_capacity_policy(
+  input : ReviewInput,
+  policy : CapacityPolicy,
+) -> CapacityGate raise ReviewError {
+  validate_policy_resources(input, policy)
+  let review = compare_capacity(input)
+  { review, violations: capacity_violations(review, policy), }
+}
+
+///|
+fn CapacityViolation::to_json(violation : CapacityViolation) -> Json {
+  {
+    "resource": Json::string(violation.resource),
+    "metric": Json::string(violation.metric),
+    "limit": Json::number(
+      violation.limit.to_double(),
+      repr=violation.limit.to_string(),
+    ),
+    "actual": Json::number(
+      violation.actual.to_double(),
+      repr=violation.actual.to_string(),
+    ),
+  }
 }
 
 ///|
 pub fn CapacityGate::to_json(self : CapacityGate) -> Json {
-  let entries = self.violations.map(violation => {
-    let entry : Json = {
-      "resource": Json::string(violation.resource),
-      "metric": Json::string(violation.metric),
-      "limit": Json::number(
-        violation.limit.to_double(),
-        repr=violation.limit.to_string(),
-      ),
-      "actual": Json::number(
-        violation.actual.to_double(),
-        repr=violation.actual.to_string(),
-      ),
-    }
-    entry
-  })
   {
     "schema": "batchcontour.capacity-gate.v1",
     "verdict": if self.has_failures() {
@@ -95,7 +118,7 @@ pub fn CapacityGate::to_json(self : CapacityGate) -> Json {
     } else {
       "passed"
     },
-    "regression_blocked": Json::boolean(self.regression_blocked),
-    "violations": Json::array(entries),
+    "regression_blocked": Json::boolean(self.regression_blocked()),
+    "violations": Json::array(self.violations.map(CapacityViolation::to_json)),
   }
 }

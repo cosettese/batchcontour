@@ -5,5 +5,5 @@ version = "0.1.0"
 license = "Apache-2.0"
 
 import {
-  "cosettese/batchcontour@0.14.1",
+  "cosettese/batchcontour@0.15.0",
 }

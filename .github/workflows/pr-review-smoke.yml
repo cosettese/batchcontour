@@ -31,6 +31,7 @@ jobs:
           budget-path: examples/pull-request/budget.json
           plan-path: examples/pull-request/baseline.json
           candidate-plan-path: examples/pull-request/candidate.json
+          policy-path: examples/kubernetes/lenient-policy.json
           report-path: ${{ runner.temp }}/batchcontour-blocked.json
       - name: Check expected block
         if: steps.blocked.outcome != 'failure'

@@ -7,6 +7,8 @@ import {
 }
 
 // Values
+pub fn archive_capacity_gate(ReviewInput, CapacityPolicy) -> @json.Json raise ReviewError
+
 pub fn archive_capacity_review(ReviewInput) -> @json.Json raise ReviewError
 
 pub fn assemble_review(String, String, String) -> ReviewInput raise ReviewError
@@ -27,6 +29,8 @@ pub fn replay_history(ReviewInput, RunHistory, String) -> ReplayReport raise Rev
 
 pub fn verify_capacity_evidence(ReviewInput, String) -> CapacityReport raise ReviewError
 
+pub fn verify_gate_evidence(ReviewInput, CapacityPolicy, String) -> CapacityGate raise ReviewError
+
 pub fn widen_duration_bounds(ReviewInput, RunHistory) -> ReviewInput raise ReviewError
 
 // Errors
@@ -41,6 +45,7 @@ pub impl Show for ReviewError
 type CapacityGate
 pub fn CapacityGate::has_failures(Self) -> Bool
 pub fn CapacityGate::regression_blocked(Self) -> Bool
+pub fn CapacityGate::report(Self) -> CapacityReport
 pub fn CapacityGate::to_json(Self) -> @json.Json
 pub fn CapacityGate::violations(Self) -> ArrayView[CapacityViolation]
 

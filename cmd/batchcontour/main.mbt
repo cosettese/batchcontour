@@ -42,6 +42,8 @@ let usage =
   #|Usage: batchcontour review INPUT.json
   #|       batchcontour summarize INPUT.json
   #|       batchcontour gate INPUT.json POLICY.json
+  #|       batchcontour archive-gate INPUT.json POLICY.json
+  #|       batchcontour verify-gate-evidence INPUT.json POLICY.json ARCHIVE.json
   #|       batchcontour scenarios INPUT.json SCENARIOS.json
   #|       batchcontour repair INPUT.json OPTIONS.json
   #|       batchcontour archive-review INPUT.json
@@ -79,12 +81,35 @@ async fn duration_command(
 }
 
 ///|
-async fn gate_command(plan_path : String, policy_path : String) -> Int32 {
+async fn gate_command(
+  plan_path : String,
+  policy_path : String,
+  archive_output~ : Bool = false,
+  evidence_path? : String,
+) -> Int32 {
   let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
     error => raise FileError("\{plan_path}: \{error}")
   }
   let policy = @capacity.CapacityPolicy::from_json(read_input(policy_path)) catch {
     error => raise FileError("\{policy_path}: \{error}")
+  }
+  if evidence_path is Some(path) {
+    let gate = @capacity.verify_gate_evidence(
+      input,
+      policy,
+      read_input(path, archive=true),
+    ) catch {
+      error => raise FileError("\{path}: \{error}")
+    }
+    @stdio.stdout.text.write(gate.to_json().stringify() + "\n")
+    return 0
+  }
+  if archive_output {
+    let archive = @capacity.archive_capacity_gate(input, policy) catch {
+      error => raise FileError("\{plan_path}, \{policy_path}: \{error}")
+    }
+    @stdio.stdout.text.write(archive.stringify() + "\n")
+    return 0
   }
   let gate = @capacity.check_capacity_policy(input, policy) catch {
     error => raise FileError("\{plan_path}, \{policy_path}: \{error}")
@@ -268,8 +293,19 @@ async fn run(args : ArrayView[String]) -> Int32 {
           1
         }
       }
-    ["gate", plan_path, policy_path] =>
-      gate_command(plan_path, policy_path) catch {
+    ["gate" | "archive-gate" as command, plan_path, policy_path] =>
+      gate_command(
+        plan_path,
+        policy_path,
+        archive_output=command == "archive-gate",
+      ) catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["verify-gate-evidence", plan_path, policy_path, evidence_path] =>
+      gate_command(plan_path, policy_path, evidence_path~) catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")
           1

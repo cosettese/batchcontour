@@ -70,19 +70,14 @@ fn check_evidence_value(
 }
 
 ///|
-/// Verify an archive against caller-provided trusted input and a fresh review.
-/// Every field, contributor and exact numeric literal must match.
-pub fn verify_capacity_evidence(
-  input : ReviewInput,
-  evidence : String,
-) -> CapacityReport raise ReviewError {
+fn parse_evidence(evidence : String) -> Json raise ReviewError {
   guard evidence.length() <= max_evidence_units else {
     raise LimitExceeded(
       path="$",
       detail="archive exceeds 32 Mi UTF-16 code units",
     )
   }
-  let decoded = @json.parse(
+  @json.parse(
     evidence[:],
     max_nesting_depth=16,
     reject_duplicate_keys=true,
@@ -90,7 +85,20 @@ pub fn verify_capacity_evidence(
   ) catch {
     error => raise InvalidInput(path="$", detail=error.to_string())
   }
-  let root = read_object(decoded, ["schema", "input", "report"], "$")
+}
+
+///|
+/// Verify an archive against caller-provided trusted input and a fresh review.
+/// Every field, contributor and exact numeric literal must match.
+pub fn verify_capacity_evidence(
+  input : ReviewInput,
+  evidence : String,
+) -> CapacityReport raise ReviewError {
+  let root = read_object(
+    parse_evidence(evidence),
+    ["schema", "input", "report"],
+    "$",
+  )
   guard root["schema"] == Json::string(review_evidence_schema) else {
     raise InvalidInput(
       path="$.schema",
@@ -101,4 +109,49 @@ pub fn verify_capacity_evidence(
   let report = compare_capacity(input)
   check_evidence_value(root["report"], report.to_json(), "$.report")
   report
+}
+
+///|
+let gate_evidence_schema = "batchcontour.gate-evidence.v1"
+
+///|
+/// Archive the normalized policy and review with both the verdict and its evidence.
+pub fn archive_capacity_gate(
+  input : ReviewInput,
+  policy : CapacityPolicy,
+) -> Json raise ReviewError {
+  let gate = check_capacity_policy(input, policy)
+  {
+    "schema": Json::string(gate_evidence_schema),
+    "input": input.to_json(),
+    "policy": policy.to_json(),
+    "gate": gate.to_json(),
+    "report": gate.report().to_json(),
+  }
+}
+
+///|
+/// Recompute and verify a gate archive against trusted inputs from the caller.
+pub fn verify_gate_evidence(
+  input : ReviewInput,
+  policy : CapacityPolicy,
+  evidence : String,
+) -> CapacityGate raise ReviewError {
+  let root = read_object(
+    parse_evidence(evidence),
+    ["schema", "input", "policy", "gate", "report"],
+    "$",
+  )
+  guard root["schema"] == Json::string(gate_evidence_schema) else {
+    raise InvalidInput(
+      path="$.schema",
+      detail="expected " + gate_evidence_schema,
+    )
+  }
+  check_evidence_value(root["input"], input.to_json(), "$.input")
+  check_evidence_value(root["policy"], policy.to_json(), "$.policy")
+  let gate = check_capacity_policy(input, policy)
+  check_evidence_value(root["gate"], gate.to_json(), "$.gate")
+  check_evidence_value(root["report"], gate.report().to_json(), "$.report")
+  gate
 }

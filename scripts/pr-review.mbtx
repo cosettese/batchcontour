@@ -108,14 +108,25 @@ async fn review_commits(
   let (assembled, status) = moon_cli(["assemble", budget, baseline, next])
   guard status == 0 else { fail("could not assemble review inputs") }
   @fs.write_file(review, assembled)
-  let (report, result) = if policy_path.is_empty() {
-    moon_cli(["review", review])
+  let (report, result, gate_evidence) = if policy_path.is_empty() {
+    let (text, code) = moon_cli(["review", review])
+    (@json.parse(text[:]), code, None)
   } else {
     let policy = temp + "/policy.json"
     @fs.write_file(policy, read_blob(repository, base, policy_path))
-    moon_cli(["gate", review, policy])
+    let (text, _) = moon_cli(["archive-gate", review, policy])
+    let evidence = @json.parse(text[:], preserve_number_repr=true)
+    guard evidence is Object(fields) && fields.get("gate") is Some(Object(gate)) else {
+      fail("gate evidence is missing its verdict")
+    }
+    let code = match gate.get("verdict") {
+      Some(String("passed")) => 0
+      Some(String("blocked")) => 2
+      _ => fail("invalid capacity gate verdict in evidence")
+    }
+    (Json::object(gate), code, Some(evidence))
   }
-  let output : Json = {
+  let output : Map[String, Json] = {
     "schema": Json::string("batchcontour.pr-review.v1"),
     "base_commit": Json::string(base),
     "candidate_commit": Json::string(candidate),
@@ -128,9 +139,16 @@ async fn review_commits(
       Json::string(policy_path)
     },
     "verdict": Json::string(if result == 0 { "passed" } else { "blocked" }),
-    "report": @json.parse(report[:]),
+    "report": report,
   }
-  @fs.write_file(report_path, output.stringify() + "\n", create_mode=CreateNew)
+  if gate_evidence is Some(document) {
+    output["gate_evidence"] = document
+  }
+  @fs.write_file(
+    report_path,
+    Json::object(output).stringify() + "\n",
+    create_mode=CreateNew,
+  )
   println(
     if result == 0 {
       "BatchContour passed."

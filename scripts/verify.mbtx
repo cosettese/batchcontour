@@ -172,6 +172,7 @@ async fn verify_cli(target : String) -> Array[String] {
     target,
   )
   let evidence = verify_evidence_cli(target)
+  let gate_evidence = verify_gate_evidence_cli(target)
   let (repair, _) = invoke_cli(
     target,
     [
@@ -214,8 +215,42 @@ async fn verify_cli(target : String) -> Array[String] {
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
     proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
-    imported, assembled,
+    imported, assembled, gate_evidence,
   ]
+}
+
+///|
+async fn verify_gate_evidence_cli(target : String) -> String {
+  let plan = "examples/kubernetes/maintenance.json"
+  let policy = "examples/kubernetes/lenient-policy.json"
+  let (archive, _) = invoke_cli(target, ["archive-gate", plan, policy], 0)
+  let (summary, _) = invoke_cli(target, ["gate", plan, policy], 2)
+  let (detail, _) = demo(target, "maintenance", 2)
+  guard @json.parse(archive[:]) is Object(fields) &&
+    fields.get("gate") == Some(@json.parse(summary[:])) &&
+    fields.get("report") == Some(@json.parse(detail[:])) else {
+    fail("gate archive disagrees with the standalone reports on " + target)
+  }
+  let temp = @fs.tmpdir(prefix="batchcontour-gate-evidence-")
+  defer @fs.rmdir(temp, recursive=true)
+  let path = temp + "/evidence.json"
+  @fs.write_file(path, archive)
+  let (verified, _) = invoke_cli(
+    target,
+    ["verify-gate-evidence", plan, policy, path],
+    0,
+  )
+  assert_eq(verified, summary)
+  let (output, diagnostic) = invoke_cli(
+    target,
+    [
+      "verify-gate-evidence", plan, "examples/kubernetes/strict-policy.json", path,
+    ],
+    1,
+  )
+  assert_eq(output, "")
+  assert_true(diagnostic.contains("$.policy.resources"))
+  archive
 }
 
 ///|

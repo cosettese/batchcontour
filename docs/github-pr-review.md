@@ -38,6 +38,13 @@ Use the `capacity` job as a required check if your repository gates merges. The 
 
 The integration is exercised on a GitHub-hosted Linux runner. Run the commit-isolation check locally with Git and MoonBit. It creates a temporary repository, stages a schedule change with budget and policy edits, and verifies that the review still uses the base controls and ignores working-tree edits.
 
+When a policy is configured, the JSON also includes `gate_evidence`. Its
+`report.findings` entries contain the capacity intervals, shortfall bounds
+and contributing runs. For offline verification, save `.gate_evidence` as
+`gate-evidence.json`. Reassemble the review using the budget and plans from
+the recorded commits and paths, then pass that review and the base policy to
+`verify-gate-evidence`. [Archive and verification commands](capacity-policy.md#reproduce-a-gate-decision)
+
 ```sh
 moon run --deny-warn scripts/verify-pr-review.mbtx
 ```
