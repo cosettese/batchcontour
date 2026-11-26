@@ -1,6 +1,6 @@
 name = "cosettese/batchcontour"
 
-version = "0.18.0"
+version = "0.18.1"
 
 readme = "README.md"
 

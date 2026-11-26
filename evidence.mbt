@@ -77,14 +77,7 @@ fn parse_evidence(evidence : String) -> Json raise ReviewError {
       detail="archive exceeds 32 Mi UTF-16 code units",
     )
   }
-  @json.parse(
-    evidence[:],
-    max_nesting_depth=16,
-    reject_duplicate_keys=true,
-    preserve_number_repr=true,
-  ) catch {
-    error => raise InvalidInput(path="$", detail=error.to_string())
-  }
+  parse_bounded_json(evidence, 16)
 }
 
 ///|

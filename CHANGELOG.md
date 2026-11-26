@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.1
+
+- Keep the JSON input and evidence nesting limits with the current MoonBit stable API.
+
 ## 0.18.0
 
 - Export a versioned source ZIP and SHA-256 manifest after testing the unpacked archive and an isolated downstream module.

@@ -36,19 +36,19 @@ shows the dependency and import declarations.
 Download the `batchcontour-source-bundle` artifact from the completed bundle
 workflow for the revision you want to evaluate. [Bundle workflow runs](https://github.com/cosettese/batchcontour/actions/workflows/release-bundle.yml)
 The artifact contains
-`batchcontour-v0.18.0-source.zip` and `SHA256SUMS` for version 0.18.0.
+`batchcontour-v0.18.1-source.zip` and `SHA256SUMS` for version 0.18.1.
 
 Place the two files in an empty directory. On Linux, verify the ZIP with
 `sha256sum -c SHA256SUMS`. On macOS use `shasum -a 256 -c SHA256SUMS`.
-On Windows compare `Get-FileHash .\batchcontour-v0.18.0-source.zip -Algorithm SHA256`
+On Windows compare `Get-FileHash .\batchcontour-v0.18.1-source.zip -Algorithm SHA256`
 with the value in `SHA256SUMS`.
 
 Extract the ZIP into a new directory and run the acceptance command there.
-With MoonBit and Node on the path, it checks the generated interfaces,
-runs the portable test suite, and exercises the file-based CLI examples.
+With MoonBit and Node on the path, it refreshes the registry index, generates
+interfaces, runs the portable tests, and exercises the file-based CLI examples.
 
 ```sh
-moon run --deny-warn scripts/verify.mbtx portable
+moon update && moon run --deny-warn scripts/verify.mbtx portable
 ```
 
 To generate the verified bundle from a source checkout, pass an existing

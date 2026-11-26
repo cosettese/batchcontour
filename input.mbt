@@ -216,12 +216,45 @@ fn parse_document(
   guard text.length() <= max_input_units else {
     raise LimitExceeded(path="$", detail="input exceeds 1 Mi UTF-16 code units")
   }
-  @json.parse(
-    text[:],
-    max_nesting_depth=max_depth,
-    reject_duplicate_keys=true,
-    preserve_number_repr=true,
-  ) catch {
+  parse_bounded_json(text, max_depth)
+}
+
+///|
+fn parse_bounded_json(
+  text : String,
+  max_depth : Int32,
+) -> Json raise ReviewError {
+  // Limit parser stack depth before decoding while leaving JSON syntax to core.
+  let mut depth = 0
+  let mut in_string = false
+  let mut escaped = false
+  for ch in text {
+    if in_string {
+      if escaped {
+        escaped = false
+      } else if ch == '\\' {
+        escaped = true
+      } else if ch == '"' {
+        in_string = false
+      }
+      continue
+    }
+    match ch {
+      '"' => in_string = true
+      '[' | '{' => {
+        depth += 1
+        guard depth <= max_depth else {
+          raise InvalidInput(
+            path="$",
+            detail="JSON nesting exceeds \{max_depth} containers",
+          )
+        }
+      }
+      ']' | '}' => depth -= 1
+      _ => ()
+    }
+  }
+  @json.parse(text[:], reject_duplicate_keys=true, preserve_number_repr=true) catch {
     error => raise InvalidInput(path="$", detail=error.to_string())
   }
 }
