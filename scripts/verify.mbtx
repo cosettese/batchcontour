@@ -329,10 +329,26 @@ async fn verify_kubernetes_import(target : String) -> String {
     target,
     [
       "import-kubernetes", "examples/kubernetes/completed-jobs.json", "candidate",
-      "batch-demo",
+      "batch-demo", "--min-samples", "2",
     ],
     0,
   )
+  guard @json.parse(history[:]) is Object(fields) &&
+    fields.get("min_samples") == Some(Json::number(2.0)) else {
+    fail("the requested history threshold was lost on " + target)
+  }
+  for invalid in ["0", "+2", "4097"] {
+    let (output, error) = invoke_cli(
+      target,
+      [
+        "import-kubernetes", "examples/kubernetes/completed-jobs.json", "candidate",
+        "batch-demo", "--min-samples", invalid,
+      ],
+      1,
+    )
+    assert_eq(output, "")
+    assert_true(error.contains("--min-samples"))
+  }
   let (rejected, diagnostic) = invoke_cli(
     target,
     [

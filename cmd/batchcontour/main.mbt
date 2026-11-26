@@ -51,7 +51,7 @@ let usage =
   #|       batchcontour verify-durations INPUT.json HISTORY.json
   #|       batchcontour propose-durations INPUT.json HISTORY.json
   #|       batchcontour replay-history INPUT.json HISTORY.json baseline|candidate
-  #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE
+  #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE [--min-samples N]
   #|       batchcontour assemble BUDGET.json BASELINE.json CANDIDATE.json
   #|       batchcontour split INPUT.json
 
@@ -164,6 +164,26 @@ async fn repair_command(
   } else {
     2
   }
+}
+
+///|
+fn read_min_samples(arguments : ArrayView[String]) -> Int32 raise FileError {
+  if arguments.is_empty() {
+    return 1
+  }
+  let detail = "expected --min-samples with an integer from 1 to 4096"
+  guard arguments is ["--min-samples", value] &&
+    !value.is_empty() &&
+    value.length() <= 4 else {
+    raise FileError(detail)
+  }
+  let mut count = 0
+  for ch in value {
+    guard ch is ('0'..<='9') else { raise FileError(detail) }
+    count = count * 10 + ch.to_int() - '0'.to_int()
+  }
+  guard count >= 1 && count <= 4096 else { raise FileError(detail) }
+  count
 }
 
 ///|
@@ -291,12 +311,14 @@ async fn run(args : ArrayView[String]) -> Int32 {
           1
         }
       }
-    ["import-kubernetes", path, plan, namespace_name] =>
+    ["import-kubernetes", path, plan, namespace_name, .. arguments] =>
       try {
+        let min_samples = read_min_samples(arguments)
         let history = @capacity.import_kubernetes_history(
           read_input(path),
           plan~,
           namespace_name~,
+          min_samples~,
         )
         @stdio.stdout.text.write(history.to_json().stringify() + "\n")
         0

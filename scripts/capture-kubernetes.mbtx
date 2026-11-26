@@ -1,0 +1,40 @@
+----
+import {
+  "moonbitlang/async@0.22.10",
+  "moonbitlang/async@0.22.10/fs",
+  "moonbitlang/async@0.22.10/shell",
+  "moonbitlang/core/env",
+  "moonbitlang/core/json",
+}
+----
+
+///|
+async fn kubectl(args : Array[String]) -> String {
+  let result = @shell.Cmd("kubectl", args).output(timeout_ms=20_000)
+  guard result.exit_code() == 0 else { fail(result.stderr()) }
+  result.stdout()
+}
+
+///|
+async fn main {
+  guard @env.args()[1:] is [output] else {
+    fail("usage: moon run scripts/capture-kubernetes.mbtx -- OUTPUT.json")
+  }
+  for _ in 0..<55 {
+    let job_list = kubectl([
+      "get", "jobs", "-n", "batchcontour-capture", "-l", "batch-review=hello", "--field-selector",
+      "status.successful=1", "-o", "json",
+    ])
+    guard @json.parse(job_list[:]) is Object(fields) &&
+      fields.get("items") is Some(Array(jobs)) else {
+      fail("expected kubectl to return a Job list")
+    }
+    if jobs.length() >= 2 {
+      @fs.write_file(output, job_list, create_mode=CreateNew)
+      println("Captured completed Kubernetes Jobs: \{jobs.length()}")
+      return
+    }
+    @async.sleep(5000)
+  }
+  fail("expected at least two completed CronJob Jobs within the capture window")
+}

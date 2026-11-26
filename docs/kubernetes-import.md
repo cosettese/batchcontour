@@ -14,4 +14,11 @@ To reproduce the case without a cluster, replace `completed-jobs.json` with `exa
 
 The importer accepts a Kubernetes `batch/v1 JobList` or a kubectl `v1 List` of `batch/v1 Job` items. It extracts `metadata.uid`, the controlling CronJob's name, `status.startTime` and `status.completionTime`. Other Kubernetes fields are outside this projection. Every item needs a single controlling `batch/v1 CronJob`, a true terminal `Complete` condition and whole-second UTC timestamps. Exports with duplicate Job UIDs, different controller UIDs for the same name, a continuation token, failed or unfinished Jobs, suspension history, or a different namespace fail without a partial history document. The controller may reset start time after suspension. [Kubernetes list behavior](https://kubernetes.io/docs/reference/using-api/api-concepts/) · [Kubernetes Job lifecycle](https://kubernetes.io/docs/concepts/workloads/controllers/job/)
 
-Job timestamps describe controller-level elapsed time, including any retries or delay before a Pod runs. Replay applies the plan's declared resource quantity to the entire interval. Select your deployment cohort before exporting. The CLI emits a `batchcontour.history.v1` document with `min_samples` set to 1. Library callers can use `import_kubernetes_history(export, plan="candidate", namespace_name="batch-demo", min_samples=3)`.
+Job timestamps describe controller-level elapsed time, including any retries or delay before a Pod runs. Replay applies the plan's declared resource quantity to the entire interval. Select your deployment cohort before exporting. The CLI emits a `batchcontour.history.v1` document with `min_samples` set to 1 by default. Pass `--min-samples 3` to require three samples per job in downstream coverage checks. Library callers can use `import_kubernetes_history(export, plan="candidate", namespace_name="batch-demo", min_samples=3)`.
+
+## Capture a live fixture
+
+The [capture workflow](../.github/workflows/kubernetes-capture.yml) starts a
+disposable kind cluster and runs the [capture CronJob](../examples/kubernetes/capture-cronjob.yaml).
+It waits for at least two successful Jobs, validates the export with the CLI,
+and stores the original JSON as the `completed-kubernetes-jobs` artifact.
