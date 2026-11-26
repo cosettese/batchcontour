@@ -30,3 +30,33 @@ the BatchContour library from the locally built archive.
 The source package excludes the development consumer, workspaces and
 local build/dependency caches using `.moonignore`. The [consumer source](https://github.com/cosettese/batchcontour/tree/main/integration/consumer)
 shows the dependency and import declarations.
+
+## Download and verify a versioned bundle
+
+Download the `batchcontour-source-bundle` artifact from the completed bundle
+workflow for the revision you want to evaluate. [Bundle workflow runs](https://github.com/cosettese/batchcontour/actions/workflows/release-bundle.yml)
+The artifact contains
+`batchcontour-v0.18.0-source.zip` and `SHA256SUMS` for version 0.18.0.
+
+Place the two files in an empty directory. On Linux, verify the ZIP with
+`sha256sum -c SHA256SUMS`. On macOS use `shasum -a 256 -c SHA256SUMS`.
+On Windows compare `Get-FileHash .\batchcontour-v0.18.0-source.zip -Algorithm SHA256`
+with the value in `SHA256SUMS`.
+
+Extract the ZIP into a new directory and run the acceptance command there.
+With MoonBit and Node on the path, it checks the generated interfaces,
+runs the portable test suite, and exercises the file-based CLI examples.
+
+```sh
+moon run --deny-warn scripts/verify.mbtx portable
+```
+
+To generate the verified bundle from a source checkout, pass an existing
+output directory outside the checkout to the distribution check.
+
+```sh
+moon run --deny-warn scripts/verify-distribution.mbtx all --export /path/to/bundle
+```
+
+The bundle workflow uses all four backends for downstream tests. An
+invocation on a Git tag also checks that the tag matches the packaged version.

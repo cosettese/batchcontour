@@ -72,7 +72,8 @@ fn check_members(listing : String) -> Int32 raise {
   for
     required in [
       "moon.mod", "moon.pkg", "pkg.generated.mbti", "LICENSE", "README.md", "SOURCES.md",
-      "quickstart.mbt.md", "docs/review-evidence.md", "examples/kubernetes/capacity-scenarios.json",
+      "CHANGELOG.md", "quickstart.mbt.md", "docs/review-evidence.md", "examples/kubernetes/capacity-scenarios.json",
+      "examples/kubernetes/observed-jobs.json", "examples/kubernetes/observed-replay-plan.json",
     ] {
     guard paths.contains(required) else { fail("archive lacks " + required) }
   }
@@ -80,11 +81,35 @@ fn check_members(listing : String) -> Int32 raise {
 }
 
 ///|
+fn release_filename(archive : String) -> String raise {
+  let mut filename = ""
+  for part in archive.replace_all(old="\\", new="/").split("/") {
+    filename = part.to_owned()
+  }
+  let prefix = "cosettese-batchcontour-"
+  guard filename.has_prefix(prefix) && filename.has_suffix(".zip") else {
+    fail("unexpected BatchContour package filename: " + filename)
+  }
+  let version = filename[prefix.length():filename.length() - 4].to_owned()
+  if @env.get_env_var("GITHUB_REF_TYPE") == Some("tag") {
+    guard @env.get_env_var("GITHUB_REF_NAME") == Some("v" + version) else {
+      fail("release tag must match package version " + version)
+    }
+  }
+  "batchcontour-v" + version + "-source.zip"
+}
+
+///|
 async fn main {
-  let native = match @env.args()[1:] {
-    ["portable"] => false
-    ["all"] => true
-    _ => fail("usage: moon run scripts/verify-distribution.mbtx portable|all")
+  let (native, output) = match @env.args()[1:] {
+    ["portable"] => (false, None)
+    ["all"] => (true, None)
+    ["portable" | "all" as mode, "--export", directory] =>
+      (mode == "all", Some(directory))
+    _ =>
+      fail(
+        "usage: moon run scripts/verify-distribution.mbtx portable|all [--export DIRECTORY]",
+      )
   }
   let temp = @fs.tmpdir(prefix="batchcontour-distribution-")
   defer @fs.rmdir(temp, recursive=true)
@@ -109,6 +134,24 @@ async fn main {
     ignore(checked("tar", ["-xf", archive, "-C", library]))
   } else {
     ignore(checked("unzip", ["-q", archive, "-d", library]))
+  }
+  if output is Some(_) {
+    let paths = ["pkg.generated.mbti", "cmd/batchcontour/pkg.generated.mbti"]
+    let interfaces : Array[Bytes] = []
+    for path in paths {
+      interfaces.push(@fs.read_file(library + "/" + path).binary())
+    }
+    // Exercise the standalone archive before adding it to a consumer workspace.
+    ignore(
+      checked(
+        "moon",
+        ["run", "--deny-warn", "scripts/verify.mbtx", "portable"],
+        cwd=library,
+      ),
+    )
+    for index, path in paths {
+      assert_eq(@fs.read_file(library + "/" + path).binary(), interfaces[index])
+    }
   }
   for file in ["moon.mod", "moon.pkg", "workflow_test.mbt"] {
     @fs.write_file(
@@ -137,8 +180,23 @@ async fn main {
     }
     println("Archive consumer \{target}: 3 tests passed")
   }
-  let digest = @crypto.sha256(@fs.read_file(archive).binary())
-  println(
-    "Verified \{count} archive members, SHA-256 \{@crypto.bytes_to_hex_string(digest)}",
-  )
+  let archive_bytes = @fs.read_file(archive).binary()
+  let digest = @crypto.sha256(archive_bytes)
+  let checksum = @crypto.bytes_to_hex_string(digest)
+  if output is Some(directory) {
+    let filename = release_filename(archive)
+    let destination = directory + "/" + filename
+    let manifest = directory + "/SHA256SUMS"
+    guard !@fs.exists(destination) && !@fs.exists(manifest) else {
+      fail("release archive or checksum already exists in " + directory)
+    }
+    @fs.write_file(destination, archive_bytes, create_mode=CreateNew)
+    @fs.write_file(
+      manifest,
+      checksum + "  " + filename + "\n",
+      create_mode=CreateNew,
+    )
+    println("Verified the unpacked archive and exported " + filename)
+  }
+  println("Verified \{count} archive members, SHA-256 \{checksum}")
 }
