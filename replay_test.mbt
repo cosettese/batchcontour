@@ -23,6 +23,13 @@ test "replay clips observations and splits at exact run and capacity boundaries"
   )
   let report = @batchcontour.replay_history(input, history, "candidate")
   assert_true(report.has_failures())
+  guard report.summaries() is [summary] else {
+    fail("expected only the overloaded resource")
+  }
+  assert_eq(summary.resource, "db")
+  assert_eq(summary.overload_seconds, 70L)
+  assert_eq(summary.peak_excess_units, 8L)
+  assert_eq(summary.excess_unit_seconds, 200L)
   assert_eq(report.coverage()[0].sample_count, 2)
   let spans = report.overloads()
   assert_eq(spans.length(), 3)

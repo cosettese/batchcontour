@@ -431,6 +431,18 @@ async fn verify_observed_kubernetes_jobs(target : String) -> String {
     ) else {
     fail("incorrect replay of the captured Kubernetes Jobs on " + target)
   }
+  let (summary, _) = invoke_cli(
+    target,
+    ["summarize-replay", plan, path, "candidate"],
+    2,
+  )
+  guard @json.parse(summary[:]) is Object(data) &&
+    data.get("resources") is Some(Array([Object(resource)])) &&
+    resource.get("overload_seconds") == Some(Json::number(25.0)) &&
+    resource.get("peak_excess_units") == Some(Json::number(1.0)) &&
+    resource.get("excess_unit_seconds") == Some(Json::number(25.0)) else {
+    fail("unexpected shortfall totals for the captured Jobs on " + target)
+  }
   let (higher_threshold, _) = invoke_cli(
     target,
     [

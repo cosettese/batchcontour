@@ -16,3 +16,19 @@ The JSON report `batchcontour.history-replay.v1` shows each overload interval, i
 Exit **2** can indicate overload, insufficient job coverage, or both. Exit **1** reports an input error or analysis limit, including a run whose job is missing from the selected plan. Such errors produce no partial report.
 
 Downstream MoonBit modules can call `replay_history(input, history, "candidate")`, inspect `coverage()` and `overloads()`, or serialize the report with `to_json()`.
+
+## Summarize the impact by resource
+
+```sh
+moon run cmd/batchcontour --target wasm -- summarize-replay examples/kubernetes/maintenance.json examples/kubernetes/replay-runs.json candidate
+```
+
+The summary reports 30 overloaded seconds, a peak shortfall of one worker
+slot, and 30 slot-seconds of accumulated shortfall. The accumulated value is
+the sum of each interval's excess multiplied by its duration. It therefore
+distinguishes brief peaks from sustained shortfalls.
+
+The summary uses the same coverage, run counts, and exit codes as
+`replay-history`. Only overloaded resources appear in `resources`, in
+lexical order. Use `replay-history` to locate individual runs. MoonBit
+callers can use `ReplayReport::summaries()` or `summary_json()`.

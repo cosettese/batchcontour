@@ -158,7 +158,16 @@ type ReplayReport
 pub fn ReplayReport::coverage(Self) -> ArrayView[ReplayCoverage]
 pub fn ReplayReport::has_failures(Self) -> Bool
 pub fn ReplayReport::overloads(Self) -> ArrayView[ReplayInterval]
+pub fn ReplayReport::summaries(Self) -> Array[ReplayResourceSummary]
+pub fn ReplayReport::summary_json(Self) -> @json.Json
 pub fn ReplayReport::to_json(Self) -> @json.Json
+
+pub struct ReplayResourceSummary {
+  resource : String
+  overload_seconds : Int64
+  peak_excess_units : Int64
+  excess_unit_seconds : Int64
+}
 
 pub struct ResourceSummary {
   resource : String

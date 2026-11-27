@@ -51,6 +51,7 @@ let usage =
   #|       batchcontour verify-durations INPUT.json HISTORY.json
   #|       batchcontour propose-durations INPUT.json HISTORY.json
   #|       batchcontour replay-history INPUT.json HISTORY.json baseline|candidate
+  #|       batchcontour summarize-replay INPUT.json HISTORY.json baseline|candidate
   #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE [--min-samples N]
   #|       batchcontour assemble BUDGET.json BASELINE.json CANDIDATE.json
   #|       batchcontour split INPUT.json
@@ -328,7 +329,13 @@ async fn run(args : ArrayView[String]) -> Int32 {
           1
         }
       }
-    ["replay-history", plan_path, history_path, plan] =>
+    [
+      "replay-history"
+      | "summarize-replay" as command,
+      plan_path,
+      history_path,
+      plan,
+    ] =>
       try {
         let input = @capacity.ReviewInput::from_json(read_input(plan_path)) catch {
           error => raise FileError("\{plan_path}: \{error}")
@@ -340,7 +347,12 @@ async fn run(args : ArrayView[String]) -> Int32 {
         ) catch {
           error => raise FileError("\{history_path}: \{error}")
         }
-        @stdio.stdout.text.write(report.to_json().stringify() + "\n")
+        let output = if command == "summarize-replay" {
+          report.summary_json()
+        } else {
+          report.to_json()
+        }
+        @stdio.stdout.text.write(output.stringify() + "\n")
         if report.has_failures() {
           2
         } else {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.0
+
+- Summarize observed overload seconds, peak shortfall, and accumulated shortfall by resource.
+
 ## 0.18.2
 
 - Use the current byte-view API when reading CLI input files with MoonBit 1.0 RC1.

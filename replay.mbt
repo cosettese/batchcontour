@@ -213,7 +213,7 @@ pub fn replay_history(
 }
 
 ///|
-pub fn ReplayReport::to_json(self : ReplayReport) -> Json {
+fn ReplayReport::coverage_json(self : ReplayReport) -> Json {
   let coverage = self.coverage.map(job => {
     let entry : Json = {
       "job": Json::string(job.job_id),
@@ -222,6 +222,21 @@ pub fn ReplayReport::to_json(self : ReplayReport) -> Json {
     }
     entry
   })
+  Json::array(coverage)
+}
+
+///|
+fn ReplayReport::counts_json(self : ReplayReport) -> Json {
+  {
+    "used": Json::number(self.used.to_double()),
+    "outside_window": Json::number(self.outside.to_double()),
+    "zero_duration": Json::number(self.zero_duration.to_double()),
+    "other_plan": Json::number(self.other_plan.to_double()),
+  }
+}
+
+///|
+pub fn ReplayReport::to_json(self : ReplayReport) -> Json {
   let overloads = self.overloads.map(interval => {
     let entry : Json = {
       "resource": Json::string(interval.resource),
@@ -245,13 +260,8 @@ pub fn ReplayReport::to_json(self : ReplayReport) -> Json {
       },
     ),
     "min_samples": Json::number(self.min_samples.to_double()),
-    "coverage": Json::array(coverage),
+    "coverage": self.coverage_json(),
     "overloads": Json::array(overloads),
-    "run_counts": {
-      "used": Json::number(self.used.to_double()),
-      "outside_window": Json::number(self.outside.to_double()),
-      "zero_duration": Json::number(self.zero_duration.to_double()),
-      "other_plan": Json::number(self.other_plan.to_double()),
-    },
+    "run_counts": self.counts_json(),
   }
 }
