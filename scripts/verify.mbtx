@@ -405,6 +405,29 @@ async fn verify_observed_kubernetes_jobs(target : String) -> String {
   defer @fs.rmdir(temp, recursive=true)
   let path = temp + "/history.json"
   @fs.write_file(path, history)
+  let (merged, _) = invoke_cli(
+    target,
+    ["merge-history", path, "examples/kubernetes/runtime-in-range.json", path],
+    0,
+  )
+  guard @json.parse(merged[:]) is Object(data) &&
+    data.get("runs") is Some(Array(runs)) &&
+    runs.length() == 6 else {
+    fail("expected six distinct runs after merging exports")
+  }
+  let combined_path = temp + "/merged-history.json"
+  @fs.write_file(combined_path, merged)
+  let (merged_replay, _) = invoke_cli(
+    target,
+    ["replay-history", plan, combined_path, "candidate"],
+    2,
+  )
+  guard @json.parse(merged_replay[:]) is Object(combined) &&
+    combined.get("run_counts") is Some(Object(counts)) &&
+    counts.get("used") == Some(Json::number(2.0)) &&
+    counts.get("outside_window") == Some(Json::number(2.0)) else {
+    fail("merged runtime history changed the observed sample coverage")
+  }
   let (replay, _) = invoke_cli(
     target,
     ["replay-history", plan, path, "candidate"],

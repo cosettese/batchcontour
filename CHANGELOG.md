@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.0
+
+- Merge repeated history exports without double-counting runs or combining conflicting observations.
+
 ## 0.19.0
 
 - Summarize observed overload seconds, peak shortfall, and accumulated shortfall by resource.

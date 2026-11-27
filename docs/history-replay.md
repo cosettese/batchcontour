@@ -32,3 +32,20 @@ The summary uses the same coverage, run counts, and exit codes as
 `replay-history`. Only overloaded resources appear in `resources`, in
 lexical order. Use `replay-history` to locate individual runs. MoonBit
 callers can use `ReplayReport::summaries()` or `summary_json()`.
+
+## Combine overlapping exports
+
+If you export the same namespace at different times, a retained Job can appear
+in several files. Import each export using the same plan label and sample
+threshold, then combine the normalized histories.
+
+```sh
+moon run cmd/batchcontour --target wasm -- merge-history first-history.json second-history.json > combined-history.json
+```
+
+The command takes 2–16 history files and yields one canonical history for
+`replay-history` or `verify-durations`. Within each plan, an identical
+run ID, job, start and finish counts as one observation. If an ID points to
+different details in two files, the merge reports the conflicting input
+and exits 1. Inputs must agree on `min_samples`. MoonBit callers can use
+`merge_run_histories` with already parsed histories.

@@ -52,6 +52,7 @@ let usage =
   #|       batchcontour propose-durations INPUT.json HISTORY.json
   #|       batchcontour replay-history INPUT.json HISTORY.json baseline|candidate
   #|       batchcontour summarize-replay INPUT.json HISTORY.json baseline|candidate
+  #|       batchcontour merge-history HISTORY.json HISTORY.json [...]
   #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE [--min-samples N]
   #|       batchcontour assemble BUDGET.json BASELINE.json CANDIDATE.json
   #|       batchcontour split INPUT.json
@@ -188,6 +189,23 @@ fn read_min_samples(arguments : ArrayView[String]) -> Int32 raise FileError {
 }
 
 ///|
+async fn merge_history_command(paths : ArrayView[String]) -> Int32 {
+  guard paths.length() >= 2 && paths.length() <= 16 else {
+    raise FileError("merge-history expects 2–16 input files")
+  }
+  let inputs : Array[@capacity.RunHistory] = []
+  for path in paths {
+    let history = @capacity.RunHistory::from_json(read_input(path)) catch {
+      error => raise FileError("\{path}: \{error}")
+    }
+    inputs.push(history)
+  }
+  let history = @capacity.merge_run_histories(inputs[:])
+  @stdio.stdout.text.write(history.to_json().stringify() + "\n")
+  0
+}
+
+///|
 async fn run(args : ArrayView[String]) -> Int32 {
   match args {
     ["--help"] => {
@@ -309,6 +327,13 @@ async fn run(args : ArrayView[String]) -> Int32 {
       } catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{path}: \{error}\n")
+          1
+        }
+      }
+    ["merge-history", .. paths] =>
+      merge_history_command(paths) catch {
+        error => {
+          @stdio.stderr.text.write("batchcontour: \{error}\n")
           1
         }
       }
