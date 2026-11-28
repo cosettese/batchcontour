@@ -22,3 +22,7 @@ notes and product documentation were consulted for comparison.
 The [Actions job fixture](examples/actions/jobs.json) retains job metadata
 from this repository's [PR integration run](https://github.com/cosettese/batchcontour/actions/runs/46075771400).
 It is distributed here under Apache-2.0. The replay budget is illustrative.
+
+The Argo fixture is authored for this repository under Apache-2.0. It follows
+the documented Workflow status and CronWorkflow label.
+[Argo field reference](https://argo-workflows.readthedocs.io/en/latest/fields/) · [Argo source](https://github.com/argoproj/argo-workflows/blob/main/workflow/common/common.go)

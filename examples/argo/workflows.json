@@ -1,0 +1,39 @@
+{
+  "apiVersion": "v1",
+  "kind": "List",
+  "metadata": {},
+  "items": [
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "Workflow",
+      "metadata": {
+        "namespace": "demo",
+        "uid": "run-a",
+        "labels": {
+          "workflows.argoproj.io/cron-workflow": "nightly"
+        }
+      },
+      "status": {
+        "phase": "Succeeded",
+        "startedAt": "2026-11-27T22:18:04Z",
+        "finishedAt": "2026-11-27T22:18:37Z"
+      }
+    },
+    {
+      "apiVersion": "argoproj.io/v1alpha1",
+      "kind": "Workflow",
+      "metadata": {
+        "namespace": "demo",
+        "uid": "run-b",
+        "labels": {
+          "workflows.argoproj.io/cron-workflow": "nightly"
+        }
+      },
+      "status": {
+        "phase": "Failed",
+        "startedAt": "2026-11-27T22:18:16Z",
+        "finishedAt": "2026-11-27T22:18:49Z"
+      }
+    }
+  ]
+}

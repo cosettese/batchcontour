@@ -42,5 +42,8 @@ capacity can change even when no job starts or finishes.
 The current release compares a bounded UTC model with fixed or time-varying
 capacity. The duration evidence commands check declared ranges against
 version-labelled runs and can propose wider, minute-aligned ranges for
-another review. Provider-specific adapters need separate evidence and
-tests with representative datasets.
+another review. The portable history schema has three import paths.
+Kubernetes CronJob and GitHub Actions adapters have recorded exports from
+this repository. The Argo adapter has a synthetic fixture matching the
+documented Workflow fields. All three are exercised through the CLI.
+[Kubernetes](kubernetes-import.md) · [GitHub Actions](actions-import.md) · [Argo](argo-import.md)

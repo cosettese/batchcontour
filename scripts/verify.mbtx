@@ -201,6 +201,15 @@ async fn verify_cli(target : String) -> Array[String] {
     "examples/actions/replay-plan.json",
     32.0,
   )
+  let argo = verify_provider_history(
+    target,
+    [
+      "import-argo", "examples/argo/workflows.json", "candidate", "demo", "--min-samples",
+      "2",
+    ],
+    "examples/argo/replay-plan.json",
+    21.0,
+  )
   let assembled = verify_review_documents(target, maintenance)
   let (skip_maintenance, _) = demo(target, "skip-maintenance", 0)
   guard @json.parse(skip_maintenance[:]) is Object(fields) &&
@@ -226,7 +235,7 @@ async fn verify_cli(target : String) -> Array[String] {
   [
     before, after, maintenance, existing, gate, summary, duration_blocked, duration_passed,
     proposal, evidence, scenarios, skip_maintenance, repair, replay_blocked, replay_passed,
-    imported, assembled, gate_evidence, policy_repair, observed, actions,
+    imported, assembled, gate_evidence, policy_repair, observed, actions, argo,
   ]
 }
 

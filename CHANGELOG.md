@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.0
+
+- Import completed Argo CronWorkflow history and verify replay against a documented fixture.
+
 ## 0.21.0
 
 - Import GitHub Actions jobs with explicit name mapping and exact numeric identities.

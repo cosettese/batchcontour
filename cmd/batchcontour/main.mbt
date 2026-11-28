@@ -55,6 +55,7 @@ let usage =
   #|       batchcontour merge-history HISTORY.json HISTORY.json [...]
   #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE [--min-samples N]
   #|       batchcontour import-actions JOBS.json ALIASES.json baseline|candidate [--min-samples N]
+  #|       batchcontour import-argo WORKFLOWS.json baseline|candidate NAMESPACE [--min-samples N]
   #|       batchcontour assemble BUDGET.json BASELINE.json CANDIDATE.json
   #|       batchcontour split INPUT.json
 
@@ -357,15 +358,32 @@ async fn run(args : ArrayView[String]) -> Int32 {
           1
         }
       }
-    ["import-kubernetes", path, plan, namespace_name, .. arguments] =>
+    [
+      "import-kubernetes"
+      | "import-argo" as command,
+      path,
+      plan,
+      namespace_name,
+      .. arguments,
+    ] =>
       try {
         let min_samples = read_min_samples(arguments)
-        let history = @capacity.import_kubernetes_history(
-          read_input(path),
-          plan~,
-          namespace_name~,
-          min_samples~,
-        )
+        let input = read_input(path)
+        let history = if command == "import-argo" {
+          @capacity.import_argo_history(
+            input,
+            plan~,
+            namespace_name~,
+            min_samples~,
+          )
+        } else {
+          @capacity.import_kubernetes_history(
+            input,
+            plan~,
+            namespace_name~,
+            min_samples~,
+          )
+        }
         @stdio.stdout.text.write(history.to_json().stringify() + "\n")
         0
       } catch {

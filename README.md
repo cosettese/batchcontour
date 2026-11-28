@@ -59,13 +59,15 @@ Kubernetes 可以直接用已成功完成的 CronJob Job JSON 生成历史文件
 
 GitHub Actions 用户可导入工作流 Job 的实际起止时间，用显式名称映射对照排程模型。 [Actions 导入示例](docs/actions-import.md)
 
+Argo Workflows 用户可按 CronWorkflow 名称导入已结束的 Workflow，复盘成功或失败运行的资源占用。 [Argo 导入示例](docs/argo-import.md)
+
 把排程放进 Git 时，可以分别保存预算、基线和候选，用 `assemble` 生成同一预算下的审查输入。已有审查文件可用 `split` 迁移。 [独立排程文件](docs/review-documents.md)
 
 GitHub PR 可以直接启用容量门禁。它从基线提交读取预算，从候选提交读取排程，留下含两个提交哈希的 JSON 结果。配置绝对容量策略时，报告还提供超载时段、相关任务和可离线复核的证据。 [接入 GitHub Actions](docs/github-pr-review.md)
 
 ## 在 MoonBit 项目中使用
 
-`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.21.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
+`cosettese/batchcontour` 提供可从源码接入的库。把此模块和下游模块加入同一 `moon.work`，在下游 `moon.mod` 引用版本 `0.22.0`，并在 `moon.pkg` 导入 `cosettese/batchcontour`。
 
 ```moonbit
 let input = @batchcontour.ReviewInput::from_json(request_text)
