@@ -1,0 +1,13 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 140763018311,
+      "name": "pr-review",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-27T22:18:00Z",
+      "completed_at": "2026-11-27T22:18:32Z"
+    }
+  ]
+}

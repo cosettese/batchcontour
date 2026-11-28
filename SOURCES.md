@@ -18,3 +18,7 @@ Other fixtures, test expectations, duration and demand values are written for
 this repository. The reference minute simulation and the production interval
 sweep are separate local implementations. Ecosystem projects in the design
 notes and product documentation were consulted for comparison.
+
+The [Actions job fixture](examples/actions/jobs.json) retains job metadata
+from this repository's [PR integration run](https://github.com/cosettese/batchcontour/actions/runs/46075771400).
+It is distributed here under Apache-2.0. The replay budget is illustrative.

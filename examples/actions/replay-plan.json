@@ -1,0 +1,9 @@
+{
+  "schema": "batchcontour.input.v1",
+  "window": { "start": "2026-11-27T22:18:00Z", "end": "2026-11-27T22:19:00Z" },
+  "capacities": { "worker-slots": 0 },
+  "baseline": [],
+  "candidate": [
+    { "id": "capacity-review", "cron": "18 22 * * *", "min_minutes": 1, "max_minutes": 1, "demand": { "worker-slots": 1 } }
+  ]
+}

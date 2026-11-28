@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.0
+
+- Import GitHub Actions jobs with explicit name mapping and exact numeric identities.
+
 ## 0.20.0
 
 - Merge repeated history exports without double-counting runs or combining conflicting observations.

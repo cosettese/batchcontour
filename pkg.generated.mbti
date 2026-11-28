@@ -25,6 +25,8 @@ pub fn evaluate_launch_repairs(ReviewInput, String) -> RepairReport raise Review
 
 pub fn evaluate_launch_repairs_with_policy(ReviewInput, String, CapacityPolicy) -> RepairReport raise ReviewError
 
+pub fn import_actions_history(String, String, plan~ : String, min_samples? : Int32) -> RunHistory raise ReviewError
+
 pub fn import_kubernetes_history(String, plan~ : String, namespace_name~ : String, min_samples? : Int32) -> RunHistory raise ReviewError
 
 pub fn merge_run_histories(ArrayView[RunHistory]) -> RunHistory raise ReviewError

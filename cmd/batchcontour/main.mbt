@@ -54,6 +54,7 @@ let usage =
   #|       batchcontour summarize-replay INPUT.json HISTORY.json baseline|candidate
   #|       batchcontour merge-history HISTORY.json HISTORY.json [...]
   #|       batchcontour import-kubernetes JOBS.json baseline|candidate NAMESPACE [--min-samples N]
+  #|       batchcontour import-actions JOBS.json ALIASES.json baseline|candidate [--min-samples N]
   #|       batchcontour assemble BUDGET.json BASELINE.json CANDIDATE.json
   #|       batchcontour split INPUT.json
 
@@ -334,6 +335,25 @@ async fn run(args : ArrayView[String]) -> Int32 {
       merge_history_command(paths) catch {
         error => {
           @stdio.stderr.text.write("batchcontour: \{error}\n")
+          1
+        }
+      }
+    ["import-actions", path, aliases, plan, .. arguments] =>
+      try {
+        let min_samples = read_min_samples(arguments)
+        let history = @capacity.import_actions_history(
+          read_input(path),
+          read_input(aliases),
+          plan~,
+          min_samples~,
+        )
+        @stdio.stdout.text.write(history.to_json().stringify() + "\n")
+        0
+      } catch {
+        error => {
+          @stdio.stderr.text.write(
+            "batchcontour: \{path}, \{aliases}: \{error}\n",
+          )
           1
         }
       }
